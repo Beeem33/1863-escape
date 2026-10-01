@@ -1,0 +1,21 @@
+{
+  "name": "1863-escape",
+  "private": true,
+  "version": "0.1.0",
+  "description": "1863: The Escape — a first-person historical infinite runner built with Three.js, TypeScript and Vite.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@types/three": "^0.186.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2"
+  }
+}
