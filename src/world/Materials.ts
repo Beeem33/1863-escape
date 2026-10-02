@@ -132,10 +132,11 @@ function make(): {
 
   const water = new THREE.MeshStandardMaterial({
     color: 0x3a3d2c,
-    roughness: 0.08,
-    metalness: 0.1,
+    roughness: 0.12,
+    metalness: 0.0,
+    envMapIntensity: 0.45,
     transparent: true,
-    opacity: 0.86,
+    opacity: 0.9,
   });
 
   const mud = new THREE.MeshStandardMaterial({ color: 0x3b2c1e, roughness: 0.35, metalness: 0 });
