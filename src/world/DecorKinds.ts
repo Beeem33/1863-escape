@@ -27,8 +27,7 @@ export type DecorKind =
   | 'cannon'
   | 'gabion'
   | 'wheel'
-  | 'burntHouse'
-  | 'grave';
+  | 'burntHouse';
 
 /**
  * Animated set pieces (soldiers, fires, flags…). Each one is a small object
@@ -40,6 +39,5 @@ export type FeatureKind =
   | 'fire'
   | 'flag'
   | 'smokeColumn'
-  | 'fireflies'
   | 'signalLantern'
   | 'birds';

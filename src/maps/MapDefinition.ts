@@ -15,6 +15,9 @@ export type MapId = 'cotton' | 'swamp' | 'battlefield';
 export interface AtmosphereSettings {
   skyZenith: number;
   skyHorizon: number;
+  /** Cloud cover 0..1. */
+  clouds: number;
+  cloudColor: number;
   /** Colour of the glow around the sun. */
   sunGlow: number;
   sunColor: number;
