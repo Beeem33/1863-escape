@@ -4,7 +4,7 @@ import type { InputManager } from '../core/InputManager';
 import type { Settings } from '../core/Settings';
 import { Player } from './Player';
 import { PlayerCamera } from './PlayerCamera';
-import { PlayerController } from './PlayerController';
+import { PlayerController, type MovementIntent } from './PlayerController';
 import { PlayerMovement, type GroundQuery } from './PlayerMovement';
 
 /**
@@ -16,6 +16,7 @@ export class PlayerSystem {
   readonly controller: PlayerController;
   readonly movement: PlayerMovement;
   readonly view: PlayerCamera;
+  private readonly idle: MovementIntent = { strafe: 0, push: false, ease: false, sprint: false, jump: false, lookBack: false };
 
   constructor(
     private readonly input: InputManager,
@@ -34,11 +35,19 @@ export class PlayerSystem {
     this.controller.clear();
   }
 
-  update(dt: number, baseSpeed: number, ground: GroundQuery, acceptInput: boolean): void {
-    const intent = acceptInput ? this.controller.update() : (this.controller.clear(), this.controller.intent);
+  /**
+   * @param source 'input' = keyboard/mouse, 'none' = no control (cutscenes),
+   *               or an explicit intent (autopilot).
+   * @param forceLookBack turn the head to look behind (capture sequence).
+   */
+  update(dt: number, baseSpeed: number, ground: GroundQuery, source: 'input' | 'none' | MovementIntent, forceLookBack = false): void {
+    let intent: MovementIntent;
+    if (source === 'input') intent = this.controller.update();
+    else if (source === 'none') intent = this.idle;
+    else intent = source;
     const mouse = this.input.consumeMouse();
-    if (acceptInput) this.view.applyMouse(mouse.dx, mouse.dy);
+    if (source === 'input') this.view.applyMouse(mouse.dx, mouse.dy);
     this.movement.update(this.player, intent, baseSpeed, ground, dt);
-    this.view.update(this.player, intent.lookBack, dt);
+    this.view.update(this.player, intent.lookBack || forceLookBack, dt);
   }
 }

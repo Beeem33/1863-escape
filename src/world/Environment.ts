@@ -113,10 +113,10 @@ export class Environment {
 
     const ringTex = Textures.treeline().clone();
     ringTex.wrapS = THREE.RepeatWrapping;
-    ringTex.repeat.set(7, 1);
+    ringTex.repeat.set(16, 1);
     ringTex.needsUpdate = true;
     this.horizon = new THREE.Mesh(
-      new THREE.CylinderGeometry(720, 720, 90, 48, 1, true).translate(0, 30, 0),
+      new THREE.CylinderGeometry(720, 720, 34, 48, 1, true).translate(0, 13, 0),
       new THREE.MeshBasicMaterial({ map: ringTex, transparent: true, alphaTest: 0.35, side: THREE.BackSide, fog: false, depthWrite: false }),
     );
     this.horizon.renderOrder = -9;

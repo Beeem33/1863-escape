@@ -153,7 +153,7 @@ export function buildFern(): PropPart[] {
 
 export function buildGrassTuft(dry: boolean): PropPart[] {
   const rng = new Random(dry ? 6602 : 6601);
-  return [{ geometry: crossedCards(1.1, dry ? 0.75 : 0.6, 3, rng, dry ? 0xb59a62 : 0x7f9450), material: Materials().grass }];
+  return [{ geometry: crossedCards(1.1, dry ? 0.75 : 0.6, 3, rng, dry ? 0x9c8558 : 0x6a7444), material: Materials().grass }];
 }
 
 export function buildReeds(): PropPart[] {

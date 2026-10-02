@@ -126,7 +126,7 @@ export function crossedCards(width: number, height: number, planes = 3, rng?: Ra
     // Normals point up-ish so the card catches sky light like a grass tuft would.
     const nor = pg.getAttribute('normal') as THREE.BufferAttribute;
     for (let k = 0; k < nor.count; k++) {
-      const v = new THREE.Vector3(nor.getX(k) * 0.4, 1, nor.getZ(k) * 0.4).normalize();
+      const v = new THREE.Vector3(nor.getX(k) * 0.8, 0.7, nor.getZ(k) * 0.8).normalize();
       nor.setXYZ(k, v.x, v.y, v.z);
     }
     geos.push(pg);

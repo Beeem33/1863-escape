@@ -84,6 +84,7 @@ export class ObstacleManager {
     if (this.debugBoxes) this.rebuildDebug();
   }
 
+
   private release(o: Obstacle): void {
     if (!this.active.delete(o)) return;
     o.release();
@@ -152,6 +153,10 @@ export class ObstacleManager {
 
   clear(): void {
     for (const o of [...this.active]) this.release(o);
+  }
+
+  get debugEnabled(): boolean {
+    return this.debugBoxes;
   }
 
   /** Toggle wireframe collision boxes (F3). */
