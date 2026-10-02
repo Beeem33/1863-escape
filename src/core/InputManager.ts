@@ -27,7 +27,7 @@ export class InputManager {
 
   private handleKeyDown = (e: KeyboardEvent): void => {
     // Keep the browser from scrolling / opening help on game keys.
-    if (['Space', 'F1', 'F2', 'F3', 'F4', 'Tab', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
+    if (['Space', 'F1', 'F2', 'F3', 'F4', 'F5', 'Tab', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
     if (!e.repeat) this.pressed.add(e.code);
     this.down.add(e.code);
   };
