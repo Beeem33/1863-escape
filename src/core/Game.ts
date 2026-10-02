@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { AudioManager } from '../audio/AudioManager';
 import { CollectibleConfig, GraphicsConfig, PlayerConfig } from '../config/GameConfig';
 import { ENDINGS, ROUTE_FRAGMENTS } from '../config/Story';
 import { PostProcessing } from '../effects/PostProcessing';
@@ -40,6 +41,7 @@ export class Game {
   readonly hazards: BattleHazards;
   readonly post: PostProcessing;
   readonly ui: UIManager;
+  readonly audio: AudioManager;
   readonly autopilot = new Autopilot();
 
   state = GameState.Menu;
@@ -69,6 +71,7 @@ export class Game {
     this.pursuit = new PursuitManager(this.scene, this.bus);
     this.hazards = new BattleHazards(this.scene, this.bus, this.world.particles);
     this.post = new PostProcessing(this.renderer, this.scene, this.camera);
+    this.audio = new AudioManager(this.bus, this.settings);
     this.ui = new UIManager(uiRoot, this.settings, {
       play: () => this.startRun(),
       resume: () => this.resume(),
@@ -103,6 +106,8 @@ export class Game {
   toMenu(): void {
     this.state = GameState.Menu;
     this.stateTime = 0;
+    this.audio.active = false;
+    this.audio.setPaused(false);
     this.input.exitPointerLock();
     this.resetWorld(this.newSeed());
     this.ui.hideAllScreens();
@@ -116,6 +121,8 @@ export class Game {
     this.resetWorld(this.newSeed());
     this.state = GameState.Playing;
     this.stateTime = 0;
+    this.audio.active = true;
+    this.audio.setPaused(false);
     this.ui.hideAllScreens();
     this.ui.hud.show();
     this.ui.captions.clear();
@@ -139,6 +146,7 @@ export class Game {
   pause(): void {
     if (this.state !== GameState.Playing) return;
     this.state = GameState.Paused;
+    this.audio.setPaused(true);
     this.input.exitPointerLock();
     this.ui.pause.show();
   }
@@ -148,6 +156,7 @@ export class Game {
     this.ui.closePanel();
     this.ui.pause.hide(true);
     this.state = GameState.Playing;
+    this.audio.setPaused(false);
     if (this.settings.data.mouseLook) this.input.requestPointerLock();
   }
 
@@ -159,6 +168,7 @@ export class Game {
 
   private toGameOver(): void {
     this.state = GameState.GameOver;
+    this.audio.active = false;
     const distance = Math.floor(this.players.player.d);
     const isNewBest = Records.submit(distance);
     Records.addPieces(this.stats.mapPieces);
@@ -309,6 +319,10 @@ export class Game {
         break;
     }
 
+    if (this.state !== GameState.Paused) {
+      const p2 = this.players.player;
+      this.audio.update(dt, this.world.terrain.blendAt(p2.d), p2, this.state === GameState.Playing);
+    }
     this.post.update(dt, this.world.environment.current);
     this.post.render();
     this.updateDebug(dt);
