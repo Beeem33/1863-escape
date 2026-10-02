@@ -1,5 +1,7 @@
 import type * as THREE from 'three';
 import type { EventBus } from '../core/EventBus';
+import { CollectibleManager } from '../collectibles/CollectibleManager';
+import { ObstacleManager } from '../obstacles/ObstacleManager';
 import { AmbientEffects } from '../effects/AmbientEffects';
 import { Particles } from '../effects/Particles';
 import type { MapDefinition } from '../maps/MapDefinition';
@@ -28,6 +30,8 @@ export class WorldManager {
   readonly environment: Environment;
   readonly particles: Particles;
   readonly ambient: AmbientEffects;
+  readonly obstacles: ObstacleManager;
+  readonly collectibles: CollectibleManager;
   private currentMap: MapDefinition | null = null;
   private time = 0;
 
@@ -51,6 +55,13 @@ export class WorldManager {
     this.environment = new Environment(scene, renderer);
     this.particles = new Particles(scene);
     this.ambient = new AmbientEffects(this.particles);
+    this.obstacles = new ObstacleManager(scene, bus, this.particles);
+    this.collectibles = new CollectibleManager(scene, bus);
+    const height = (x: number, d: number) => this.chunks.groundHeight(x, d);
+    this.chunks.onPopulate = (chunk) => {
+      this.obstacles.populate(chunk, height);
+      this.collectibles.populate(chunk, height);
+    };
     this.decor.warmUp();
   }
 
@@ -92,6 +103,8 @@ export class WorldManager {
       if (!first || dominant.id === 'cotton') this.bus.emit('map:enter', { id: dominant.id, name: dominant.name, caption: dominant.caption });
     }
 
+    this.obstacles.update(dt, this.time, player.d);
+    this.collectibles.update(dt, this.time);
     this.features.update({ dt, time: this.time, playerX: player.x, playerD: player.d, particles: this.particles, bus: this.bus });
     const cam = camera.position;
     this.ambient.update(dt, this.environment.current, cam.x, cam.y, cam.z, player.speed);

@@ -100,8 +100,13 @@ export const CottonFieldMap: MapDefinition = {
           if (rng.chance(0.18 * (1 - w) + 0.05)) ctx.place('dryGrass', px, d, { scale: rng.range(0.7, 1.3) });
           continue;
         }
-        if (!ctx.isClear(px, d, 0.5)) continue;
-        ctx.place('cottonPlant', px, d, { scale: rng.range(0.75, 1.15), scaleY: rng.range(0.85, 1.15), tilt: rng.range(-0.08, 0.08) });
+        // Inside the running corridor the plants are sparser, shorter and kept
+        // clear of obstacles so hazards always read clearly.
+        const inCorridor = Math.abs(px) < corridor + 0.5;
+        if (inCorridor && rng.chance(0.4)) continue;
+        if (!ctx.isClear(px, d, inCorridor ? 1.4 : 0.5)) continue;
+        const scale = inCorridor ? rng.range(0.55, 0.8) : rng.range(0.8, 1.15);
+        ctx.place('cottonPlant', px, d, { scale, scaleY: rng.range(0.85, 1.1), tilt: rng.range(-0.08, 0.08) });
       }
     }
 

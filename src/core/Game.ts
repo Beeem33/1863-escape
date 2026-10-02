@@ -49,6 +49,12 @@ export class Game {
     this.world.reset(seed);
     this.players.reset();
 
+    this.bus.on('player:hit', (e) => {
+      this.players.view.shake(0.35 + e.severity * 0.35);
+      this.players.view.kick(1.6 * e.severity);
+    });
+    this.bus.on('player:land', (e) => this.players.view.kick(0.6 + e.impact * 1.2));
+
     canvas.addEventListener('click', () => this.input.requestPointerLock());
     window.addEventListener('resize', () => this.resize());
     this.resize();
@@ -69,6 +75,9 @@ export class Game {
   private frame(dt: number, _time: number): void {
     const p = this.players.player;
     this.players.update(dt, Difficulty.runSpeed(p.d), this.world.ground, true);
+    this.world.obstacles.collide(p);
+    this.world.collectibles.collect(p);
+    this.world.environment.lantern = Math.min(1, p.lanternTimer / 2);
     this.world.update(dt, p, this.camera);
     this.renderer.render(this.scene, this.camera);
     this.input.endFrame();
