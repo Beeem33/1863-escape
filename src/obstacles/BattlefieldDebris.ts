@@ -69,3 +69,40 @@ export class BurningDebris extends Obstacle {
     ctx.particles.fire(this.x, this.baseY + 0.6, -this.d, this.width * 0.45, ctx.dt, 1);
   }
 }
+
+/**
+ * Wire entanglement: telegraph wire strung low and criss-crossed between
+ * sharpened stakes (barbed wire was not invented until after the war).
+ */
+export class WireEntanglement extends Obstacle {
+  readonly kind = 'wire' as const;
+
+  protected build(rng: Random): void {
+    const M = ObstacleMaterials();
+    const n = Math.max(2, Math.round(this.width / 1.6));
+    const xs: number[] = [];
+    for (let i = 0; i <= n; i++) {
+      const x = -this.width / 2 + (i * this.width) / n + rng.range(-0.15, 0.15);
+      xs.push(x);
+      for (const z of [-0.35, 0.35]) {
+        const h = rng.range(0.7, 0.9);
+        this.part(Geo.box(), M.woodWeathered, x, -0.15, z + rng.range(-0.1, 0.1), rng.range(-0.15, 0.15), 0, rng.range(-0.12, 0.12), 0.06, h + 0.15, 0.06);
+      }
+    }
+    // Wire strands: thin dark lines between stakes at several heights, plus diagonals.
+    for (let i = 0; i < n; i++) {
+      const x0 = xs[i];
+      const x1 = xs[i + 1];
+      const len = Math.hypot(x1 - x0, 0.1);
+      for (const y of [0.2, 0.45, 0.68]) {
+        for (const z of [-0.35, 0.35]) {
+          this.part(Geo.boxC(), M.iron, (x0 + x1) / 2, y + rng.range(-0.04, 0.04), z, 0, 0, rng.range(-0.05, 0.05), len, 0.008, 0.008);
+        }
+      }
+      // Criss-cross between the two rows.
+      const diag = Math.hypot(x1 - x0, 0.7);
+      this.part(Geo.boxC(), M.iron, (x0 + x1) / 2, 0.4, 0, 0, Math.atan2(0.7, x1 - x0), 0.35, diag, 0.008, 0.008);
+      this.part(Geo.boxC(), M.iron, (x0 + x1) / 2, 0.4, 0, 0, -Math.atan2(0.7, x1 - x0), -0.35, diag, 0.008, 0.008);
+    }
+  }
+}

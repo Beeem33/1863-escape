@@ -5,7 +5,7 @@ import type { Particles } from '../effects/Particles';
 import type { Player } from '../player/Player';
 import type { Chunk } from '../world/ChunkManager';
 import { Barrel } from './Barrel';
-import { Barricade, BurningDebris, Debris } from './BattlefieldDebris';
+import { Barricade, BurningDebris, Debris, WireEntanglement } from './BattlefieldDebris';
 import { Crater, Ditch, Trench } from './Crater';
 import { FallenTree, Narrows } from './FallenTree';
 import { Fence } from './Fence';
@@ -44,6 +44,7 @@ const REGISTRY: Record<ObstacleKind, () => Obstacle> = {
   brokenWagon: () => new BrokenWagon(),
   debris: () => new Debris(),
   burningDebris: () => new BurningDebris(),
+  wire: () => new WireEntanglement(),
 };
 
 export interface HitResult {

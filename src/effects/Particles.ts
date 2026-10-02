@@ -14,8 +14,8 @@ export class Particles {
   readonly glow: ParticleSystem;
 
   constructor(scene: THREE.Scene) {
-    this.smoke = new ParticleSystem(2600, Textures.smoke(), THREE.NormalBlending, 20);
-    this.glow = new ParticleSystem(1400, Textures.glow(), THREE.AdditiveBlending, 21);
+    this.smoke = new ParticleSystem(4200, Textures.smoke(), THREE.NormalBlending, 20);
+    this.glow = new ParticleSystem(2200, Textures.glow(), THREE.AdditiveBlending, 21);
     scene.add(this.smoke.mesh, this.glow.mesh);
   }
 

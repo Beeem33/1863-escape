@@ -23,7 +23,8 @@ export type ObstacleKind =
   | 'barricade'
   | 'brokenWagon'
   | 'debris'
-  | 'burningDebris';
+  | 'burningDebris'
+  | 'wire';
 
 /**
  * How an obstacle interacts with the runner.

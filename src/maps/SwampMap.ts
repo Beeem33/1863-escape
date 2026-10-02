@@ -155,6 +155,15 @@ export const SwampMap: MapDefinition = {
       ctx.feature('signalLantern', x, d, { height: rng.range(2.6, 3.4) });
     }
 
+    // ---- Rarely: a man hanged as a warning to others who would run ----------
+    if (rng.chance(0.03 * ctx.weight(d0))) {
+      const side = rng.sign();
+      const x = side * rng.range(corridor + 5, corridor + 15);
+      const d = rng.range(d0 + 8, d1 - 8);
+      ctx.place('oakMoss', x, d, { scale: 1.05, rotY: rng.range(0, Math.PI * 2) });
+      ctx.feature('hangingTree', x, d, { facing: (side > 0 ? Math.PI : 0) + rng.range(-0.35, 0.35) });
+    }
+
     // ---- An abandoned trapper's shack deep in the trees ------------------
     if (rng.chance(0.07 * ctx.weight(d0))) {
       ctx.place('cabin', rng.sign() * rng.range(35, 70), rng.range(d0, d1), { tint: 0x6a6658, scale: 0.85 });

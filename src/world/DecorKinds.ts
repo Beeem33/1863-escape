@@ -34,7 +34,11 @@ export type DecorKind =
  * with its own update(); see `world/features/`.
  */
 export type FeatureKind =
-  | 'soldierLine'
+  | 'firingLine'
+  | 'charge'
+  | 'formation'
+  | 'corpses'
+  | 'hangingTree'
   | 'cannonBattery'
   | 'fire'
   | 'flag'

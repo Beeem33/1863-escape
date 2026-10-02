@@ -56,4 +56,6 @@ export const OBSTACLE_SPECS: Record<ObstacleKind, ObstacleSpec> = {
   brokenWagon: { collision: 'solid', width: [3, 3.8], depth: [1.8, 2.4], height: 1.9, damage: 13, knockback: 5 },
   debris: { collision: 'vault', width: [2, 4], depth: [1, 1.6], height: 0.7, damage: 8, knockback: 3 },
   burningDebris: { collision: 'solid', width: [2, 3.4], depth: [1.4, 2], height: 2, damage: 12, knockback: 4 },
+  // Telegraph-wire entanglement strung between stakes (as at Fort Sanders, Nov. 1863) — vault it or trip.
+  wire: { collision: 'vault', width: [4, 10], depth: [0.9, 1.2], height: 0.75, damage: 9, knockback: 1 },
 };

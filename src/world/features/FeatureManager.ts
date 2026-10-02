@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import type { Random } from '../../utils/Random';
 import type { FeatureKind } from '../DecorKinds';
 import { Birds, SignalLantern } from './AmbientFeatures';
-import { CannonBattery, Fire, Flag, SmokeColumn, SoldierLine } from './BattleFeatures';
+import { CannonBattery, Fire, Flag, SmokeColumn } from './BattleFeatures';
+import { Charge, Corpses, FiringLine, Formation } from './BattleArmy';
+import { HangingTree } from './StoryFeatures';
 import type { Feature, FeatureContext } from './Feature';
 import type { Characters } from '../../characters/Characters';
 
@@ -11,7 +13,11 @@ import type { Characters } from '../../characters/Characters';
  * add its id to FeatureKind and register its constructor here.
  */
 const FACTORIES: Record<FeatureKind, () => Feature> = {
-  soldierLine: () => new SoldierLine(),
+  firingLine: () => new FiringLine(),
+  charge: () => new Charge(),
+  formation: () => new Formation(),
+  corpses: () => new Corpses(),
+  hangingTree: () => new HangingTree(),
   cannonBattery: () => new CannonBattery(),
   fire: () => new Fire(),
   flag: () => new Flag(),

@@ -21,6 +21,17 @@ const PATH = new THREE.Color(0xae8a62);
 const FALLOW = new THREE.Color(0x7a7140);
 const FAR_COTTON = new THREE.Color(0xd9d3c3);
 
+/** Cart lanes cut across the field every so often (scenes play out along them). */
+export const CROSS_LANE_SPACING = 170;
+const LANE_HALF = 3.2;
+const laneCenter = (d: number) => Math.round((d - 100) / CROSS_LANE_SPACING) * CROSS_LANE_SPACING + 100;
+const inCrossLane = (d: number) => Math.abs(d - laneCenter(d)) < LANE_HALF;
+/** The next cross lane at or beyond distance d. */
+export function nextCrossLane(d: number): number {
+  const c = laneCenter(d);
+  return c >= d ? c : c + CROSS_LANE_SPACING;
+}
+
 /** 0..1 fallow (unplanted, grassy) patches. */
 const fallow = (x: number, d: number, n: Noise2D) => smoothstep(0.62, 0.75, n.value(x * 0.025 + 40, d * 0.02));
 
@@ -77,6 +88,8 @@ export const CottonFieldMap: MapDefinition = {
       out.lerp(FALLOW, fallow(x, d, n) * 0.8);
       const p = Math.abs(x - pathCenter(d));
       out.lerp(PATH, (1 - smoothstep(1.0, 1.9, p)) * 0.85);
+      const lane = Math.abs(d - laneCenter(d));
+      out.lerp(PATH, (1 - smoothstep(LANE_HALF - 1.2, LANE_HALF + 0.4, lane)) * 0.75 * (1 - smoothstep(40, 70, Math.abs(x))));
     },
     surface(x, d, n) {
       return fallow(x, d, n) > 0.5 ? 'grass' : 'dirt';
@@ -88,6 +101,18 @@ export const CottonFieldMap: MapDefinition = {
   decorate(ctx: DecorationContext) {
     const { rng, d0, d1, noise, corridor } = ctx;
 
+    // Rarely: a man hanged as a warning to others who would run. Decided first
+    // so the cotton between the tree and the trail can be cleared.
+    let hang: { x: number; d: number; side: number } | null = null;
+    if (rng.chance(0.03 * ctx.weight(d0))) {
+      const side = rng.sign();
+      hang = { side, x: side * rng.range(corridor + 5, corridor + 12), d: rng.range(d0 + 10, d1 - 10) };
+      ctx.place('oakMoss', hang.x, hang.d, { scale: 1.05, rotY: rng.range(0, Math.PI * 2) });
+      ctx.feature('hangingTree', hang.x, hang.d, { facing: (side > 0 ? Math.PI : 0) + rng.range(-0.25, 0.25) });
+    }
+    const inHangClearing = (x: number, d: number) =>
+      hang !== null && Math.abs(d - hang.d) < 7 && Math.sign(x) === hang.side && Math.abs(x) < Math.abs(hang.x) + 6;
+
     // ---- Cotton rows (decoration — never blocks the runner) -------------
     const rowSpacing = 1.3;
     for (let x = -27; x <= 27; x += rowSpacing) {
@@ -95,6 +120,7 @@ export const CottonFieldMap: MapDefinition = {
         const w = ctx.weight(d);
         const px = x + rng.range(-0.12, 0.12);
         if (Math.abs(px - pathCenter(d)) < 1.5) continue;
+        if (inCrossLane(d) || inHangClearing(px, d)) continue;
         // Fields thin out and go to seed as this map fades.
         if (rng.next() > w * w * (1 - fallow(px, d, noise) * 0.9)) {
           if (rng.chance(0.18 * (1 - w) + 0.05)) ctx.place('dryGrass', px, d, { scale: rng.range(0.7, 1.3) });

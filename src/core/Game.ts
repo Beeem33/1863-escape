@@ -13,6 +13,8 @@ import { formatDistance } from '../utils/MathUtils';
 import { Random, hash32, makeSeed } from '../utils/Random';
 import { WorldManager } from '../world/WorldManager';
 import { WeatherSystem } from '../world/Weather';
+import { StoryEvents } from '../world/StoryEvents';
+import { nextCrossLane } from '../maps/CottonFieldMap';
 import { Difficulty } from './Difficulty';
 import { EventBus } from './EventBus';
 import { GameLoop } from './GameLoop';
@@ -47,6 +49,7 @@ export class Game {
   readonly autopilot = new Autopilot();
   readonly arms = new FirstPersonArms();
   readonly weather = new WeatherSystem();
+  readonly story: StoryEvents;
 
   state = GameState.Menu;
   private eventRng = new Random(1);
@@ -76,6 +79,7 @@ export class Game {
     this.world = new WorldManager(this.scene, this.renderer, this.bus);
     this.pursuit = new PursuitManager(this.bus, this.world.characters, this.world.particles);
     this.hazards = new BattleHazards(this.scene, this.bus, this.world.particles);
+    this.story = new StoryEvents(this.world.characters, this.world.particles, this.bus);
     this.post = new PostProcessing(this.renderer, this.scene, this.camera);
     this.audio = new AudioManager(this.bus, this.settings);
     this.ui = new UIManager(uiRoot, this.settings, {
@@ -171,6 +175,7 @@ export class Game {
     this.players.player.d = startD;
     this.pursuit.reset();
     this.hazards.reset();
+    this.story.reset(this.eventRng);
     this.post.danger = this.post.desaturate = this.post.flash = 0;
   }
 
@@ -397,6 +402,10 @@ export class Game {
     this.hazards.update(dt, p, battle, this.eventRng, this.world.ground.height);
     if (this.godMode) this.pursuit.gap = Math.max(this.pursuit.gap, 40);
     this.pursuit.update(dt, p, this.eventRng, this.world.ground.height);
+    const nearBoundary = this.world.maps.boundaries.some((b) => p.d > b - 160 && p.d < b + 60);
+    this.story.update(dt, p, this.eventRng, this.world.ground.height, !nearBoundary, this.stats.time, (d) =>
+      this.world.maps.mapAt(d).id === 'cotton' ? nextCrossLane(d) : d,
+    );
 
     this.world.environment.lantern = Math.min(1, p.lanternTimer / 2);
     this.world.update(dt, p, this.camera, this.weather);

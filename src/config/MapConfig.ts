@@ -85,8 +85,9 @@ export const MAP_TUNING: Record<MapId, MapTuning> = {
 
   battlefield: {
     obstacles: {
-      crater: 16,
-      trench: 8,
+      crater: 18,
+      trench: 12,
+      wire: 12,
       barricade: 14,
       brokenWagon: 10,
       debris: 14,

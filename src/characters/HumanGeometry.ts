@@ -76,8 +76,22 @@ function paint(g: THREE.BufferGeometry, rule: (x: number, y: number, z: number) 
   return g;
 }
 
+/** Cell-size multiplier for the SDF parts: 1 = finest. Set via `withDetail`. */
+let cellScale = 1;
+
+/** Build geometry at a coarser (cheaper) level of detail, e.g. for distant figures. */
+export function withDetail<T>(scale: number, build: () => T): T {
+  const prev = cellScale;
+  cellScale = scale;
+  try {
+    return build();
+  } finally {
+    cellScale = prev;
+  }
+}
+
 const sdfPart = (sdf: Sdf, min: V3, max: V3, cell: number, shade?: (x: number, y: number, z: number) => number) =>
-  polygonize(sdf, min, max, cell, shade);
+  polygonize(sdf, min, max, cell * cellScale, shade);
 
 export const HumanGeometry = {
   /** Hips and seat of the trousers, centred on the hip joint line. */

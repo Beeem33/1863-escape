@@ -43,6 +43,8 @@ export class WorldManager {
   private currentMap: MapDefinition | null = null;
   private time = 0;
 
+  private readonly groundFn = (x: number, d: number) => this.chunks.groundHeight(x, d);
+
   /** What the player's movement code needs to know about the ground. */
   readonly ground: GroundQuery = {
     height: (x, d) => this.chunks.groundHeight(x, d),
@@ -142,7 +144,7 @@ export class WorldManager {
 
     this.obstacles.update(dt, this.time, player.d);
     this.collectibles.update(dt, this.time);
-    this.features.update({ dt, time: this.time, playerX: player.x, playerD: player.d, particles: this.particles, bus: this.bus, characters: this.characters });
+    this.features.update({ dt, time: this.time, playerX: player.x, playerD: player.d, particles: this.particles, bus: this.bus, characters: this.characters, groundHeight: this.groundFn });
     this.characters.update(dt, camera.position);
     const cam = camera.position;
     this.ambient.update(dt, this.environment.current, cam.x, cam.y, cam.z, player.speed);

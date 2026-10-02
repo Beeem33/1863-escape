@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BODY, HumanGeometry } from './HumanGeometry';
+import { BODY, HumanGeometry, withDetail } from './HumanGeometry';
 import { newPose, type HumanPose } from './HumanPose';
 import type { HumanStyle } from './Styles';
 
@@ -62,9 +62,13 @@ export class Human {
   isStatic = false;
   dirty = true;
   alive = true;
+  /** Level of detail in use: 0 = near (detailed), 1 = far (light). */
+  lod = 0;
+  /** @internal LOD the matrices were last written for (-1 = never). */
+  lodApplied = -1;
   /** Seconds of animation time, free for the owner to use. */
   t = 0;
-  /** @internal */ slots: { part: PartName; index: number; side: number }[] = [];
+  /** @internal one slot per part instance: indices into the near and far pools. */ slots: { part: PartName; index: [number, number]; side: number }[] = [];
   constructor(readonly style: HumanStyle) {}
 }
 
@@ -74,7 +78,10 @@ export class Human {
  * frame. Armies of hundreds cost about as much as a few individual models.
  */
 export class HumanCrowd {
-  private readonly pools = new Map<PartName, PartPool>();
+  /** Two pools per part: [near detail, far detail]. */
+  private readonly pools = new Map<PartName, [PartPool, PartPool]>();
+  /** Figures closer than this use the detailed meshes (with hysteresis). */
+  private static readonly NEAR = 38;
   private readonly figures = new Set<Human>();
   private readonly group = new THREE.Group();
   private readonly m = {
@@ -99,25 +106,29 @@ export class HumanCrowd {
     const skin = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 });
     const gear = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, metalness: 0.15 });
     const G = HumanGeometry;
-    const make = (name: PartName, geo: THREE.BufferGeometry, mat: THREE.Material) => {
-      const pool = new PartPool(geo, mat, capacity * PER_FIGURE[name]);
-      pool.mesh.name = `human:${name}`;
-      this.pools.set(name, pool);
-      this.group.add(pool.mesh);
+    const make = (name: PartName, build: () => THREE.BufferGeometry, mat: THREE.Material) => {
+      // Near: fine SDF surface. Far: the same shape polygonised much coarser.
+      const near = new PartPool(withDetail(1.7, build), mat, capacity * PER_FIGURE[name]);
+      const far = new PartPool(withDetail(5, build), mat, capacity * PER_FIGURE[name]);
+      far.mesh.castShadow = false; // distant figures: skip the shadow pass
+      near.mesh.name = `human:${name}`;
+      far.mesh.name = `human:${name}:far`;
+      this.pools.set(name, [near, far]);
+      this.group.add(near.mesh, far.mesh);
     };
-    make('pelvis', G.pelvis(), cloth);
-    make('torso', G.torso(), cloth);
-    make('head', G.head(), skin);
-    make('upperArm', G.upperArm(), cloth);
-    make('forearm', G.forearm(), cloth);
-    make('hand', G.hand(), skin);
-    make('thigh', G.thigh(), cloth);
-    make('shin', G.shin(), cloth);
-    make('foot', G.foot(), gear);
-    make('kepi', G.kepi(), cloth);
-    make('slouch', G.slouchHat(), cloth);
-    make('rifle', G.rifle(), gear);
-    make('pack', G.pack(), cloth);
+    make('pelvis', () => G.pelvis(), cloth);
+    make('torso', () => G.torso(), cloth);
+    make('head', () => G.head(), skin);
+    make('upperArm', () => G.upperArm(), cloth);
+    make('forearm', () => G.forearm(), cloth);
+    make('hand', () => G.hand(), skin);
+    make('thigh', () => G.thigh(), cloth);
+    make('shin', () => G.shin(), cloth);
+    make('foot', () => G.foot(), gear);
+    make('kepi', () => G.kepi(), cloth);
+    make('slouch', () => G.slouchHat(), cloth);
+    make('rifle', () => G.rifle(), gear);
+    make('pack', () => G.pack(), cloth);
     this.group.name = 'humans';
     scene.add(this.group);
   }
@@ -130,8 +141,15 @@ export class HumanCrowd {
     if (this.figures.size >= this.capacity) return null;
     const h = new Human(style);
     const add = (part: PartName, color: number, side = 0) => {
-      const index = this.pools.get(part)!.alloc(this.color.setHex(color));
-      if (index >= 0) h.slots.push({ part, index, side });
+      const [near, far] = this.pools.get(part)!;
+      this.color.setHex(color);
+      const a = near.alloc(this.color);
+      const b = far.alloc(this.color);
+      if (a >= 0 && b >= 0) h.slots.push({ part, index: [a, b], side });
+      else {
+        if (a >= 0) near.release(a);
+        if (b >= 0) far.release(b);
+      }
     };
     add('pelvis', style.trousers);
     add('torso', style.coat);
@@ -154,7 +172,11 @@ export class HumanCrowd {
 
   remove(h: Human | null | undefined): void {
     if (!h || !this.figures.delete(h)) return;
-    for (const s of h.slots) this.pools.get(s.part)!.release(s.index);
+    for (const s of h.slots) {
+      const [near, far] = this.pools.get(s.part)!;
+      near.release(s.index[0]);
+      far.release(s.index[1]);
+    }
     h.slots = [];
     h.alive = false;
   }
@@ -167,13 +189,22 @@ export class HumanCrowd {
   update(camera: THREE.Vector3): void {
     this.frame++;
     for (const h of this.figures) {
+      const dist = Math.hypot(h.pose.x - camera.x, h.pose.z - camera.z);
+      // Hysteresis so figures don't flicker between detail levels.
+      const lod = dist < HumanCrowd.NEAR - (h.lod === 0 ? -4 : 0) ? 0 : 1;
+      if (lod !== h.lod) {
+        h.lod = lod;
+        h.dirty = true;
+      }
       if (h.isStatic && !h.dirty) continue;
-      const far = Math.hypot(h.pose.x - camera.x, h.pose.z - camera.z) > 160;
-      if (far && !h.dirty && (this.frame + h.slots[0]?.index) % 3 !== 0) continue;
+      if (dist > 160 && !h.dirty && (this.frame + (h.slots[0]?.index[0] ?? 0)) % 3 !== 0) continue;
       this.pose(h);
       h.dirty = false;
     }
-    for (const p of this.pools.values()) p.mesh.instanceMatrix.needsUpdate = true;
+    for (const [near, far] of this.pools.values()) {
+      near.mesh.instanceMatrix.needsUpdate = true;
+      far.mesh.instanceMatrix.needsUpdate = true;
+    }
   }
 
   private rot(out: THREE.Matrix4, x: number, y: number, z: number, order: THREE.EulerOrder = 'YXZ'): THREE.Matrix4 {
@@ -184,7 +215,10 @@ export class HumanCrowd {
   private set(part: PartName, h: Human, side: number, m: THREE.Matrix4): void {
     for (const s of h.slots) {
       if (s.part === part && s.side === side) {
-        this.pools.get(part)!.mesh.setMatrixAt(s.index, m);
+        const pools = this.pools.get(part)!;
+        pools[h.lod].mesh.setMatrixAt(s.index[h.lod], m);
+        // Switched detail level: clear the other copy.
+        if (h.lodApplied !== h.lod) pools[1 - h.lod].mesh.setMatrixAt(s.index[1 - h.lod], ZERO);
         return;
       }
     }
@@ -257,6 +291,7 @@ export class HumanCrowd {
       }
       this.set('rifle', h, 0, M.a);
     }
+    h.lodApplied = h.lod;
   }
 
   /** World position of the muzzle for a figure aiming its rifle (for flashes). */

@@ -12,6 +12,7 @@ export interface FeatureContext {
   particles: Particles;
   bus: EventBus;
   characters: Characters;
+  groundHeight(x: number, d: number): number;
 }
 
 /**

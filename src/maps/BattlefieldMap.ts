@@ -60,9 +60,11 @@ export const BattlefieldMap: MapDefinition = {
     height(x, d, n) {
       const ax = Math.abs(x);
       const out = smoothstep(11, 30, ax);
-      const roll = n.fbm(x * 0.009, d * 0.009, 3) * 5 + n.fbm(x * 0.04, d * 0.04, 2) * 0.8;
-      const micro = n.value(x * 0.7, d * 0.7) * 0.07;
-      return micro + out * (roll + 1.2) - pocks(x, d, n) * out;
+      // Rolling ground everywhere — you run up and over the swells.
+      const swell = Math.sin(d * 0.038) * 0.9 + Math.sin(d * 0.011 + 1.7) * 1.4 + n.fbm(x * 0.02, d * 0.02, 2) * 0.5;
+      const roll = n.fbm(x * 0.009, d * 0.009, 3) * 7 + n.fbm(x * 0.04, d * 0.04, 2) * 1.0;
+      const micro = n.value(x * 0.7, d * 0.7) * 0.08;
+      return micro + swell + out * (roll + 1.5) - pocks(x, d, n) * out;
     },
     color(x, d, n, out) {
       const v = n.value(x * 0.09, d * 0.09);
@@ -101,31 +103,46 @@ export const BattlefieldMap: MapDefinition = {
     }
 
     // ---- The armies ------------------------------------------------------
-    // Confederate lines on the left, Union lines on the right, firing across the field.
+    // Confederates hold the left flank, the Union the right; the runner crosses
+    // the ground between them. Firing lines, reserves marching up, charges
+    // across the field, and the dead of earlier assaults everywhere.
     for (const side of [-1, 1] as const) {
       const army = side > 0 ? 0 : 1;
-      if (rng.chance(0.6 * w)) {
-        const mode = rng.chance(0.6) ? 0 : rng.chance(0.5) ? 1 : 2;
-        const x = side * rng.range(mode === 2 ? 26 : 34, 62);
-        ctx.feature('soldierLine', x, rng.range(d0 + 6, d1 - 6), { army, count: rng.int(8, 18), mode, facing: -side });
-        if (rng.chance(0.5)) ctx.feature('flag', x + side * 2, rng.range(d0, d1), { army, height: 3.4 });
+      if (rng.chance(0.75 * w)) {
+        const x = side * rng.range(17, 32);
+        ctx.feature('firingLine', x, rng.range(d0 + 8, d1 - 8), { army, count: rng.int(10, 16), facing: -side });
+        if (rng.chance(0.6)) ctx.feature('flag', x + side * 3, rng.range(d0, d1), { army, height: 3.6 });
       }
-      if (rng.chance(0.22 * w)) {
-        ctx.feature('cannonBattery', side * rng.range(95, 140), rng.range(d0 + 8, d1 - 8), { count: rng.int(2, 4), facing: -side, interval: rng.range(5, 9) });
+      if (rng.chance(0.18 * w)) {
+        ctx.feature('formation', side * rng.range(45, 85), rng.range(d0, d1), { army, rows: rng.int(3, 4), cols: rng.int(6, 8), dirZ: rng.chance(0.5) ? -1 : 1, marching: rng.chance(0.7) ? 1 : 0 });
       }
-      // Field works: gabions and a broken rail fence along the flank.
-      if (rng.chance(0.35 * w)) {
-        const x = side * rng.range(26, 40);
+      if (rng.chance(0.3 * w)) {
+        ctx.feature('cannonBattery', side * rng.range(70, 120), rng.range(d0 + 8, d1 - 8), { count: rng.int(2, 4), facing: -side, interval: rng.range(3.5, 7) });
+      }
+      // Trench works along the flank: a parapet of gabions and logs.
+      if (rng.chance(0.45 * w)) {
+        const x = side * rng.range(14, 16.5);
         for (let d = d0 + rng.range(0, 3); d < d1; d += rng.range(1.2, 1.6)) {
-          if (rng.chance(0.85)) ctx.place('gabion', x + rng.range(-0.3, 0.3), d, { scale: rng.range(0.9, 1.1) });
+          if (rng.chance(0.85)) ctx.place(rng.chance(0.7) ? 'gabion' : 'log', x + rng.range(-0.3, 0.3), d, { scale: rng.range(0.9, 1.1), rotY: Math.PI / 2 + rng.range(-0.1, 0.1) });
         }
       }
       // Camps behind the lines.
       if (rng.chance(0.18 * w)) {
-        const x = side * rng.range(100, 170);
+        const x = side * rng.range(110, 170);
         const d = rng.range(d0, d1);
         for (let i = 0; i < rng.int(4, 9); i++) ctx.place('tent', x + rng.range(-14, 14), d + rng.range(-14, 14), { rotY: rng.chance(0.5) ? 0 : Math.PI / 2, scale: rng.range(0.9, 1.1) });
       }
+    }
+    // A charge across the field, well ahead.
+    if (rng.chance(0.28 * w)) {
+      const dir = rng.sign();
+      ctx.feature('charge', -dir * rng.range(40, 55), rng.range(d0 + 10, d1 - 10), { army: dir > 0 ? 1 : 0, count: rng.int(14, 24), dirX: dir, speed: rng.range(4, 5.5) });
+    }
+    // The fallen.
+    if (w > 0.3) {
+      ctx.feature('corpses', -rng.range(12, 30), rng.range(d0 + 6, d1 - 6), { count: rng.int(4, 8), spread: 9 });
+      ctx.feature('corpses', rng.range(12, 30), rng.range(d0 + 6, d1 - 6), { count: rng.int(4, 8), spread: 9 });
+      ctx.feature('corpses', rng.range(-6, 6), rng.range(d0 + 6, d1 - 6), { count: rng.int(1, 4), spread: 5 });
     }
 
     // ---- Burning farmhouses ----------------------------------------------

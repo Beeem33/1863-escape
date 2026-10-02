@@ -25,6 +25,8 @@ export class BattleHazards {
   private markers: THREE.Mesh[] = [];
   private timer = 6;
   private whizTimer = 3;
+  /** Untargeted shell bursts all over the field — the battle doesn't care about you. */
+  private barrageTimer = 2;
   private readonly group = new THREE.Group();
   private readonly markerGeo = new THREE.CircleGeometry(1, 24).rotateX(-Math.PI / 2);
 
@@ -68,6 +70,18 @@ export class BattleHazards {
       if (this.timer <= 0) {
         this.timer = interval * rng.range(0.6, 1.4);
         this.fire(p, rng, groundHeight);
+      }
+      // Shells bursting across the field, on the flanks and far ahead.
+      this.barrageTimer -= dt;
+      if (this.barrageTimer <= 0) {
+        this.barrageTimer = rng.range(0.4, 1.2) / intensity;
+        const flank = rng.chance(0.75);
+        const x = flank ? rng.sign() * rng.range(13, 70) : rng.range(-9, 9);
+        const d = flank ? p.d + rng.range(-10, 120) : p.d + rng.range(55, 140);
+        const y = groundHeight(x, d);
+        const strength = rng.range(0.6, 1.2);
+        this.particles.explosion(x, y, -d, strength);
+        this.bus.emit('battle:explosion', { x, z: -d, distance: Math.hypot(x - p.x, d - p.d), strength });
       }
       // Musket balls whizzing past and kicking the dirt.
       this.whizTimer -= dt * intensity;

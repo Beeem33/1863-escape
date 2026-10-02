@@ -9,7 +9,7 @@ export class Characters {
   readonly hounds: QuadrupedCrowd;
 
   constructor(scene: THREE.Scene) {
-    this.humans = new HumanCrowd(scene, 420);
+    this.humans = new HumanCrowd(scene, 560);
     this.horses = new QuadrupedCrowd(scene, HORSE, 'horse', 14);
     this.hounds = new QuadrupedCrowd(scene, HOUND, 'hound', 8);
   }
