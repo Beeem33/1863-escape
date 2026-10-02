@@ -31,8 +31,8 @@ export const CottonFieldMap: MapDefinition = {
   tuning: MAP_TUNING.cotton,
 
   atmosphere: {
-    skyZenith: 0x6e8db5,
-    skyHorizon: 0xf1c58e,
+    skyZenith: 0x5b82b8,
+    skyHorizon: 0xf4bf80,
     clouds: 0.32,
     cloudColor: 0xe6d2b8,
     sunGlow: 0xffa954,
@@ -43,9 +43,9 @@ export const CottonFieldMap: MapDefinition = {
     hemiSky: 0xcfc3a8,
     hemiGround: 0x6b4c2e,
     hemiIntensity: 1.15,
-    fogColor: 0xe3c59a,
+    fogColor: 0xe6c393,
     fogDensity: 0.0042,
-    exposure: 1.0,
+    exposure: 0.92,
     grade: { gain: [1.07, 1.0, 0.88], lift: [0.025, 0.012, -0.01], saturation: 0.9, contrast: 1.08, vignette: 0.38 },
     bloom: 0.38,
     dust: 0.65,

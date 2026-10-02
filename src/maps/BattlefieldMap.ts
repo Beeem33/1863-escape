@@ -13,10 +13,10 @@ import type { MapDefinition } from './MapDefinition';
  * beyond them, for the first time, the word "free" means something nearby.
  */
 
-const TRAMPLED = new THREE.Color(0x6e6446);
+const TRAMPLED = new THREE.Color(0x7d7250);
 const MUD = new THREE.Color(0x4a3b2b);
 const SCORCH = new THREE.Color(0x2c2620);
-const GRASS = new THREE.Color(0x77704a);
+const GRASS = new THREE.Color(0x857c52);
 
 /** Old shell holes pock the whole field. */
 const pocks = (x: number, d: number, n: Noise2D) => smoothstep(0.78, 0.92, n.value(x * 0.12 + 50, d * 0.12)) * 0.7;
@@ -35,21 +35,21 @@ export const BattlefieldMap: MapDefinition = {
     sunGlow: 0xff7838,
     sunColor: 0xffb47c,
     sunIntensity: 2.1,
-    sunElevation: 7,
+    sunElevation: 15,
     sunAzimuth: 12,
     hemiSky: 0xaa9c8c,
-    hemiGround: 0x4c3c2c,
-    hemiIntensity: 1.25,
+    hemiGround: 0x5c4a36,
+    hemiIntensity: 1.7,
     fogColor: 0x9b8a76,
-    fogDensity: 0.0095,
-    exposure: 1.04,
-    grade: { gain: [1.06, 0.97, 0.87], lift: [0.022, 0.01, 0.0], saturation: 0.7, contrast: 1.12, vignette: 0.5 },
+    fogDensity: 0.0078,
+    exposure: 1.18,
+    grade: { gain: [1.06, 0.97, 0.87], lift: [0.022, 0.01, 0.0], saturation: 0.7, contrast: 1.12, vignette: 0.42 },
     bloom: 0.5,
     dust: 0.55,
     dustColor: 0xcfc6bb,
     mist: 0.08,
     mistColor: 0xc8beb0,
-    smoke: 0.9,
+    smoke: 1.0,
     waterLevel: -20,
     waterColor: 0x3a3a2e,
     horizonColor: 0x3c3732,
@@ -94,9 +94,9 @@ export const BattlefieldMap: MapDefinition = {
     // Confederate lines on the left, Union lines on the right, firing across the field.
     for (const side of [-1, 1] as const) {
       const army = side > 0 ? 0 : 1;
-      if (rng.chance(0.45 * w)) {
-        const mode = rng.chance(0.65) ? 0 : rng.chance(0.5) ? 1 : 2;
-        const x = side * rng.range(mode === 2 ? 30 : 42, 85);
+      if (rng.chance(0.6 * w)) {
+        const mode = rng.chance(0.6) ? 0 : rng.chance(0.5) ? 1 : 2;
+        const x = side * rng.range(mode === 2 ? 26 : 34, 62);
         ctx.feature('soldierLine', x, rng.range(d0 + 6, d1 - 6), { army, count: rng.int(8, 18), mode, facing: -side });
         if (rng.chance(0.5)) ctx.feature('flag', x + side * 2, rng.range(d0, d1), { army, height: 3.4 });
       }

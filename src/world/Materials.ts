@@ -108,13 +108,14 @@ function make(): {
 
   const cotton = new THREE.MeshStandardMaterial({
     map: Textures.cotton(),
+    color: 0xd8d2c8,
     alphaTest: 0.4,
     side: THREE.DoubleSide,
     roughness: 1,
   });
   addWind(cotton, 0.07, 'wind-cotton');
 
-  const cottonBoll = new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 1 });
+  const cottonBoll = new THREE.MeshStandardMaterial({ color: 0xcfc9bc, roughness: 1 });
   addWind(cottonBoll, 0.07, 'wind-cotton');
 
   const wood = new THREE.MeshStandardMaterial({ map: Textures.wood(), vertexColors: true, roughness: 0.92 });
@@ -130,9 +131,13 @@ function make(): {
   const hay = new THREE.MeshStandardMaterial({ map: Textures.grass(), vertexColors: true, roughness: 1 });
   hay.map = Textures.ground();
 
+  const waterNormal = Textures.waterNormal();
+  waterNormal.repeat.set(70, 80);
   const water = new THREE.MeshStandardMaterial({
     color: 0x3a3d2c,
-    roughness: 0.12,
+    normalMap: waterNormal,
+    normalScale: new THREE.Vector2(0.35, 0.35),
+    roughness: 0.08,
     metalness: 0.0,
     envMapIntensity: 0.45,
     transparent: true,

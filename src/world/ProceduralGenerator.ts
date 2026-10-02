@@ -72,6 +72,8 @@ export class ProceduralGenerator {
   private pendingDeformations: Deformation[] = [];
   private pendingRoute: { d: number; x: number }[] = [];
   private lastFullWidthD = -1000;
+  /** The previous row forced a vault on the route — don't demand two in a row. */
+  private lastRowBlocked = false;
 
   constructor(private readonly maps: MapManager) {}
 
@@ -85,6 +87,7 @@ export class ProceduralGenerator {
     this.pendingDeformations = [];
     this.pendingRoute = [];
     this.lastFullWidthD = -1000;
+    this.lastRowBlocked = false;
   }
 
   /** Per-chunk RNG for decorations — independent of generation order. */
@@ -145,7 +148,9 @@ export class ProceduralGenerator {
     const occupied: Interval[] = [];
     const count = Math.floor(Difficulty.obstaclesPerRow(d) * tuning.density + rng.next());
     const vaultOnPathChance = lerp(0.3, 0.75, difficulty);
-    let pathBlocked = false;
+    // Never demand a vault on the route two rows running — always time to land and recover.
+    let pathBlocked = this.lastRowBlocked;
+    const blockedByPrevious = pathBlocked;
     let rowHasFullWidth = false;
 
     for (let n = 0; n < count && !rowHasFullWidth; n++) {
@@ -203,7 +208,7 @@ export class ProceduralGenerator {
           if (!deform) continue;
         }
         occupied.push(iv);
-        if (crossesPath) pathBlocked = true;
+        if (crossesPath && spec.collision !== 'slow') pathBlocked = true;
         this.pendingObstacles.push({ kind, x, d: rowD, width, depth, seed, map: map.id });
         if (deform) this.pendingDeformations.push(deform);
         break;
@@ -211,7 +216,9 @@ export class ProceduralGenerator {
     }
 
     // ---- 4. Collectibles ----
-    this.placeCollectibles(d, spacing, map.tuning.collectibles, pathBlocked);
+    const blockedHere = pathBlocked && !blockedByPrevious;
+    this.placeCollectibles(d, spacing, map.tuning.collectibles, blockedHere);
+    this.lastRowBlocked = blockedHere;
 
     this.nextRowD += spacing * rng.range(0.9, 1.2);
   }

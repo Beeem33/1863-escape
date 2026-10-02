@@ -83,7 +83,7 @@ export class PostProcessing {
   ) {
     this.composer = new EffectComposer(renderer);
     this.composer.addPass(new RenderPass(scene, camera));
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.4, 0.55, 0.82);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.4, 0.55, 0.9);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
     this.grade = new ShaderPass(GradeShader);

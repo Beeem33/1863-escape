@@ -63,7 +63,7 @@ export class AmbientEffects {
     }
 
     // ---- Banks of powder smoke drifting across the field ------------------
-    this.smokeAcc += dt * a.smoke * 7;
+    this.smokeAcc += dt * a.smoke * 10;
     while (this.smokeAcc > 1) {
       this.smokeAcc -= 1;
       const side = Math.random() < 0.5 ? -1 : 1;
@@ -77,7 +77,7 @@ export class AmbientEffects {
         life: 12 + Math.random() * 8,
         size: 6,
         endSize: 16,
-        alpha: 0.32 * a.smoke,
+        alpha: 0.4 * a.smoke,
         color: 0xb9b2a6,
         drag: 0.02,
         fadeIn: 0.3,

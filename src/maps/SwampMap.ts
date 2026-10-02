@@ -38,7 +38,7 @@ export const SwampMap: MapDefinition = {
     sunGlow: 0xc8b88a,
     sunColor: 0xc9c2a2,
     sunIntensity: 1.25,
-    sunElevation: 9,
+    sunElevation: 12,
     sunAzimuth: -28,
     hemiSky: 0x8b9a8c,
     hemiGround: 0x3c3826,

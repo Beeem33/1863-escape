@@ -7,6 +7,13 @@ import { Materials, windUniforms } from './Materials';
 import type { MapBlend } from './MapManager';
 import { Sky } from './Sky';
 
+/**
+ * Three.js uses physical light units (Lambert = albedo / π), so map
+ * atmospheres are authored on a friendlier scale and multiplied here.
+ */
+const SUN_SCALE = 2.0;
+const HEMI_SCALE = 2.0;
+
 /** Per-run randomisation of light and weather so no two runs look identical. */
 export interface RunWeather {
   sunAzimuthOffset: number;
@@ -187,7 +194,7 @@ export class Environment {
     this.sunDir.set(Math.sin(azim) * Math.cos(elev), Math.sin(elev), -Math.cos(azim) * Math.cos(elev)).normalize();
     const warm = this.ca.setRGB(1 + 0.08 * w.warmth, 1, 1 - 0.12 * w.warmth);
     this.sun.color.copy(this.color('sunColor')).multiply(warm);
-    this.sun.intensity = a.sunIntensity;
+    this.sun.intensity = a.sunIntensity * SUN_SCALE;
     // Keep the shadow box centred a little ahead of the player.
     const cx = playerX;
     const cz = playerZ - 18;
@@ -198,7 +205,7 @@ export class Environment {
     // ---- Ambient --------------------------------------------------------
     this.hemi.color.copy(this.color('hemiSky'));
     this.hemi.groundColor.copy(this.color('hemiGround'));
-    this.hemi.intensity = a.hemiIntensity;
+    this.hemi.intensity = a.hemiIntensity * HEMI_SCALE;
 
     // ---- Fog (the lantern pushes it back) -------------------------------
     this.fog.color.copy(this.color('fogColor'));
@@ -227,7 +234,9 @@ export class Environment {
     // ---- Water ------------------------------------------------------------
     this.water.visible = a.waterLevel > -3;
     this.water.position.set(0, a.waterLevel, playerZ - 220);
-    (this.water.material as THREE.MeshStandardMaterial).color.copy(this.color('waterColor'));
+    const wm = this.water.material as THREE.MeshStandardMaterial;
+    wm.color.copy(this.color('waterColor'));
+    if (wm.normalMap) wm.normalMap.offset.set(this.time * 0.004, this.time * 0.007 - playerZ / 520 * 80);
 
     // ---- Wind ----------------------------------------------------------
     windUniforms.uTime.value = this.time;
@@ -245,10 +254,8 @@ export class Environment {
     const key = `${this.color('skyHorizon').getHexString()}${this.color('skyZenith').getHexString()}${this.color('fogColor').getHexString()}`;
     if (key === this.lastEnvKey) return;
     this.lastEnvKey = key;
-    const prevPos = this.sky.mesh.position.clone();
     this.envTarget?.dispose();
     this.envTarget = this.pmrem.fromScene(this.envScene, 0, 1, 1000);
-    this.sky.mesh.position.copy(prevPos);
     (Materials().water as THREE.MeshStandardMaterial).envMap = this.envTarget.texture;
     (Materials().water as THREE.MeshStandardMaterial).needsUpdate = true;
   }

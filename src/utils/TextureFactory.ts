@@ -479,6 +479,34 @@ export const Textures = {
     );
   },
 
+  /** Tileable ripple normal map for standing water. */
+  waterNormal(): THREE.Texture {
+    return canvasTexture(
+      'water-normal',
+      256,
+      256,
+      (ctx, w, h, rng) => {
+        const field = fbmField(rng, w, h, 8, 4);
+        const img = ctx.createImageData(w, h);
+        const at = (x: number, y: number) => field[((y + h) % h) * w + ((x + w) % w)];
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const dx = (at(x + 1, y) - at(x - 1, y)) * 6;
+            const dy = (at(x, y + 1) - at(x, y - 1)) * 6;
+            const len = Math.hypot(dx, dy, 1);
+            const i = (y * w + x) * 4;
+            img.data[i] = ((-dx / len) * 0.5 + 0.5) * 255;
+            img.data[i + 1] = ((-dy / len) * 0.5 + 0.5) * 255;
+            img.data[i + 2] = ((1 / len) * 0.5 + 0.5) * 255;
+            img.data[i + 3] = 255;
+          }
+        }
+        ctx.putImageData(img, 0, 0);
+      },
+      { srgb: false },
+    );
+  },
+
   /** Distant tree-line silhouette for the horizon ring (alpha). */
   treeline(): THREE.Texture {
     return canvasTexture(
