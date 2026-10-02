@@ -79,11 +79,12 @@ export class Game {
     this.post = new PostProcessing(this.renderer, this.scene, this.camera);
     this.audio = new AudioManager(this.bus, this.settings);
     this.ui = new UIManager(uiRoot, this.settings, {
-      play: () => this.startRun(),
+      play: () => this.openPlay(),
+      pickLevel: (level) => this.startRun(level),
       resume: () => this.resume(),
       quitToMenu: () => this.toMenu(),
-      retry: () => this.startRun(),
-    });
+      retry: () => this.startRun(this.stats.startLevel),
+    }, this.levelOptions());
     this.loop = new GameLoop((dt) => this.frame(dt));
 
     const params = new URLSearchParams(location.search);
@@ -123,8 +124,23 @@ export class Game {
     this.post.fade = 0;
   }
 
-  startRun(): void {
-    this.resetWorld(this.newSeed());
+  /** The level list for the level-select screen. */
+  private levelOptions(): { level: number; title: string; name: string; unlockAt: number }[] {
+    const maps = this.world.maps;
+    return Array.from({ length: maps.levelCount }, (_, i) => {
+      const info = maps.levelInfo(i + 1);
+      return { level: i + 1, title: info.title, name: info.map.name, unlockAt: maps.levelStart(i + 1) };
+    });
+  }
+
+  /** Play: straight into Level 1, or choose a level once more are unlocked. */
+  openPlay(): void {
+    if (Records.unlockedLevel > 1) this.ui.openLevelSelect();
+    else this.startRun(1);
+  }
+
+  startRun(level = 1): void {
+    this.resetWorld(this.newSeed(), level);
     this.state = GameState.Playing;
     this.stateTime = 0;
     this.audio.active = true;
@@ -135,16 +151,24 @@ export class Game {
     if (this.settings.data.mouseLook) this.input.requestPointerLock();
     this.bus.emit('run:start', { seed: this.stats.seed });
     window.setTimeout(() => {
-      if (this.state === GameState.Playing) this.ui.captions.showCaption(this.world.map?.name ?? '', this.world.map?.caption ?? '');
-    }, 900);
+      if (this.state === GameState.Playing) this.showLevelCard(level, false);
+    }, 700);
   }
 
-  resetWorld(seed: number): void {
-    this.stats.reset(seed);
+  private showLevelCard(level: number, unlocked: boolean): void {
+    const info = this.world.maps.levelInfo(level);
+    this.ui.levelCard.show(info.title, info.map.name, info.map.caption, unlocked);
+  }
+
+  /** Reset everything for a new run starting at the beginning of `level`. */
+  resetWorld(seed: number, level = 1): void {
+    const startD = this.world.maps.levelStart(level);
+    this.stats.reset(seed, level, startD);
     this.eventRng = new Random(hash32(seed, 77));
-    this.world.reset(seed);
+    this.world.reset(seed, startD);
     this.weather.reset(new Random(hash32(seed, 0x77e)));
     this.players.reset();
+    this.players.player.d = startD;
     this.pursuit.reset();
     this.hazards.reset();
     this.post.danger = this.post.desaturate = this.post.flash = 0;
@@ -176,7 +200,7 @@ export class Game {
   private toGameOver(): void {
     this.state = GameState.GameOver;
     this.audio.active = false;
-    const distance = Math.floor(this.players.player.d);
+    const distance = Math.floor(this.stats.distance);
     const isNewBest = Records.submit(distance);
     Records.addPieces(this.stats.mapPieces);
     const mapId = this.world.map?.id ?? 'cotton';
@@ -231,9 +255,7 @@ export class Game {
         }
       }
     });
-    this.bus.on('map:enter', (e) => {
-      if (this.state === GameState.Playing && this.stateTime > 3) this.ui.captions.showCaption(e.name, e.caption);
-    });
+    this.bus.on('level:up', (e) => this.showLevelCard(e.level, e.unlocked));
 
     this.input.onPointerLockChange = (locked) => {
       // Losing the mouse mid-run (Esc) pauses the game.
@@ -292,7 +314,7 @@ export class Game {
     if (this.state !== GameState.Playing) return;
     const p = this.players.player;
     const target = this.world.maps.nextMapStart(p.d) - 360;
-    if (target <= p.d) return;
+    if (!Number.isFinite(target) || target <= p.d) return;
     // Advance chunk by chunk so generation stays sequential.
     while (p.d < target) {
       p.d = Math.min(target, p.d + 30);
@@ -367,10 +389,24 @@ export class Game {
     this.world.environment.lantern = Math.min(1, p.lanternTimer / 2);
     this.world.update(dt, p, this.camera, this.weather);
 
-    this.stats.distance = p.d;
+    this.stats.distance = p.d - this.stats.startDistance;
     this.stats.time += dt;
     this.stats.currentMap = this.world.mapName;
-    this.ui.hud.update(p, this.stats.mapPieces, this.pursuit.gap);
+
+    // ---- Levels: crossing a boundary unlocks the next level ---------------
+    const maps = this.world.maps;
+    const level = maps.levelAt(p.d);
+    if (level > this.stats.level) {
+      this.stats.level = level;
+      const unlocked = Records.unlockLevel(level);
+      this.bus.emit('level:up', { level, unlocked });
+    }
+    const end = maps.levelEnd(p.d);
+    const next = maps.levelInfo(level + 1);
+    const levelText = Number.isFinite(end)
+      ? `${maps.levelInfo(level).title} · ${next.map.name.replace(/^The /, 'the ')} in ${Math.max(0, Math.ceil(end - p.d)).toLocaleString('en-US')} m`
+      : `${maps.levelInfo(level).title} · ${this.world.mapName}`;
+    this.ui.hud.update(p, this.stats.distance, this.stats.mapPieces, this.pursuit.gap, levelText);
     this.ui.hud.setHint(this.settings.data.mouseLook && !this.input.pointerLocked && this.stateTime > 1.5);
 
     this.post.danger = this.pursuit.danger;
@@ -397,7 +433,7 @@ export class Game {
         `Player pos     x ${p.x.toFixed(2)}  y ${p.y.toFixed(2)}  d ${p.d.toFixed(1)}`,
         `Player speed   ${p.speed.toFixed(2)} m/s  (base ${Difficulty.runSpeed(p.d).toFixed(2)})`,
         `Current map    ${this.world.mapName}${blend.t > 0 ? `  → ${blend.b.name} ${(blend.t * 100).toFixed(0)}%` : ''}`,
-        `Lap            ${this.world.maps.lapAt(p.d)}`,
+        `Level          ${this.world.maps.levelAt(p.d)}  (journey ${p.d.toFixed(0)} m)`,
         `Weather        ${this.weather.label}`,
         `Chunk          ${Math.floor(p.d / 40)}  (live ${this.world.chunks.chunks.size})`,
         `Difficulty     ${(Difficulty.at(p.d) * 100).toFixed(0)}%`,

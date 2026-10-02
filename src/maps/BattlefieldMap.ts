@@ -90,6 +90,16 @@ export const BattlefieldMap: MapDefinition = {
     }
     if (w < 0.05) return;
 
+    // ---- Entering the field: a burning farm by the road, both flags in view ----
+    if (ctx.mapStart >= d0 - 5 && ctx.mapStart < d1 - 5) {
+      const gd = ctx.mapStart + 12;
+      ctx.place('burntHouse', -corridor - 9, gd, { rotY: 0.3 });
+      ctx.feature('fire', -corridor - 9, gd, { radius: 2.6, intensity: 1.3 });
+      ctx.feature('smokeColumn', -corridor - 9, gd, { size: 0.9 });
+      ctx.feature('flag', corridor + 22, gd + 30, { army: 0, height: 3.6 });
+      ctx.feature('flag', -corridor - 26, gd + 34, { army: 1, height: 3.6 });
+    }
+
     // ---- The armies ------------------------------------------------------
     // Confederate lines on the left, Union lines on the right, firing across the field.
     for (const side of [-1, 1] as const) {

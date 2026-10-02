@@ -138,6 +138,14 @@ export const SwampMap: MapDefinition = {
       else ctx.place('rock', x, d, { scale: rng.range(0.5, 1.0) });
     }
 
+    // ---- The way in: two great moss-hung oaks arch over the trail at the level start ----
+    if (ctx.mapStart >= d0 - 5 && ctx.mapStart < d1 - 5) {
+      const gd = ctx.mapStart + 8;
+      ctx.place('oakMoss', -corridor - 3, gd, { scale: 1.45, rotY: 0.4, tint: 0xb8c8a0 });
+      ctx.place('oakMoss', corridor + 3, gd + 4, { scale: 1.5, rotY: 3.6, tint: 0xb8c8a0 });
+      ctx.feature('signalLantern', corridor + 1.5, gd + 2, { height: 3.2 });
+    }
+
     // ---- A lantern hung on a branch: someone is helping people through ---
     if (rng.chance(0.12 * ctx.weight(d0))) {
       const side = rng.sign();

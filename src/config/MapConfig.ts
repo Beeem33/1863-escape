@@ -12,10 +12,6 @@ import type { CollectibleType } from '../collectibles/CollectibleTypes';
 import type { MapId } from '../maps/MapDefinition';
 
 export interface MapTuning {
-  /** Length of the map before the next one begins (m). */
-  length: number;
-  /** ± random variation applied to `length` each run (fraction). */
-  lengthJitter: number;
   /** Obstacle spawn weights. `open` = an intentionally empty slot. */
   obstacles: Partial<Record<ObstacleKind | 'open', number>>;
   /** Multiplies the global obstacles-per-row value. */
@@ -26,13 +22,33 @@ export interface MapTuning {
   battleHazards: boolean;
 }
 
-/** The order maps appear in. After the last map the journey loops (harder each lap). */
-export const MAP_SEQUENCE: MapId[] = ['cotton', 'swamp', 'battlefield'];
+/**
+ * ============================================================================
+ *  LEVELS
+ * ============================================================================
+ *  The journey is three levels run back to back without stopping. Reaching
+ *  the end of a level unlocks the next one (saved locally) so it can be
+ *  chosen as a starting point from the menu. The last level never ends.
+ */
+export interface LevelDef {
+  map: MapId;
+  /** Meters of this level before the next begins (Infinity = endless). */
+  length: number;
+  /** Shown on the level card. */
+  title: string;
+}
+
+export const LEVELS: LevelDef[] = [
+  { map: 'cotton', length: 2000, title: 'Level 1' },
+  { map: 'swamp', length: 2000, title: 'Level 2' },
+  { map: 'battlefield', length: Infinity, title: 'Level 3' },
+];
+
+/** Obstacle-free stretch around each level boundary (m before, m after) — a breather for the title card. */
+export const LEVEL_BREATHER: [number, number] = [90, 50];
 
 export const MAP_TUNING: Record<MapId, MapTuning> = {
   cotton: {
-    length: 1100,
-    lengthJitter: 0.12,
     obstacles: {
       fence: 20,
       barrel: 11,
@@ -50,8 +66,6 @@ export const MAP_TUNING: Record<MapId, MapTuning> = {
   },
 
   swamp: {
-    length: 1300,
-    lengthJitter: 0.12,
     obstacles: {
       fallenTree: 22,
       mudPit: 12,
@@ -70,8 +84,6 @@ export const MAP_TUNING: Record<MapId, MapTuning> = {
   },
 
   battlefield: {
-    length: 1500,
-    lengthJitter: 0.12,
     obstacles: {
       crater: 16,
       trench: 8,

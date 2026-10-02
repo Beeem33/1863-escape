@@ -76,17 +76,16 @@ export class WorldManager {
     this.decor.warmUp();
   }
 
-  /** Start a fresh, seeded journey. */
-  reset(seed: number): void {
+  /** Start a fresh, seeded journey at distance `startD` (the start of a level). */
+  reset(seed: number, startD = 0): void {
     const rng = new Random(hash32(seed, 0x3a9));
-    this.maps.reset(rng);
     this.terrain.reset(seed);
-    this.generator.reset(seed);
+    this.generator.reset(seed, startD, this.maps.boundaries);
     this.environment.randomizeWeather(rng);
     this.chunks.reset();
     this.particles.clear();
     this.currentMap = null;
-    this.chunks.fill(0);
+    this.chunks.fill(startD);
     this.decor.flush();
   }
 

@@ -10,6 +10,7 @@ import { el } from './dom';
 export class HUD {
   readonly root: HTMLDivElement;
   private distance: HTMLDivElement;
+  private level: HTMLDivElement;
   private pieces: HTMLDivElement;
   private piecesValue: HTMLSpanElement;
   private stamina: HTMLDivElement;
@@ -27,6 +28,7 @@ export class HUD {
     const dist = el('div', 'hud-distance', '', this.root);
     el('div', 'hud-label', 'Distance', dist);
     this.distance = el('div', 'value', '0 m', dist);
+    this.level = el('div', 'hud-level', '', dist);
 
     this.pieces = el('div', 'hud-pieces', '', this.root);
     el('span', 'diamond', '◆', this.pieces);
@@ -57,8 +59,9 @@ export class HUD {
     this.hint.style.opacity = visible ? '1' : '0';
   }
 
-  update(p: Player, pieces: number, gap: number): void {
-    const d = Math.floor(p.d);
+  update(p: Player, distance: number, pieces: number, gap: number, levelText = ''): void {
+    if (this.level.textContent !== levelText) this.level.textContent = levelText;
+    const d = Math.floor(distance);
     if (d !== this.lastDistance) {
       this.distance.textContent = formatDistance(d);
       this.lastDistance = d;

@@ -45,10 +45,10 @@ export function installDevTools(game: Game): void {
   };
 
   const dev = {
-    start(seed = 42): void {
+    start(seed = 42, level = 1): void {
       g.ui.hideAllScreens();
       g.ui.hud.show();
-      g.resetWorld(seed);
+      g.resetWorld(seed, level);
       g.state = GameState.Paused; // the real loop just renders; we drive the simulation
     },
     sim(seconds: number, auto = true): number {
@@ -67,7 +67,7 @@ export function installDevTools(game: Game): void {
     shot(): void {
       g.post.update(1 / 60, g.world.environment.current);
       g.post.render();
-      g.ui.hud.update(g.players.player, g.stats.mapPieces, g.pursuit.gap);
+      g.ui.hud.update(g.players.player, g.stats.distance, g.stats.mapPieces, g.pursuit.gap);
       show();
     },
     hide(): void {

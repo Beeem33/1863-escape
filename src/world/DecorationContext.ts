@@ -33,8 +33,8 @@ export interface DecorationContext {
   readonly corridor: number;
   /** Distance at which this map's stretch of the journey begins (for one-off landmarks). */
   readonly mapStart: number;
-  /** How many times the journey has looped (0 on the first pass). */
-  readonly lap: number;
+  /** Level number (1-based) this chunk belongs to. */
+  readonly level: number;
   /** 0..1 — how strongly THIS map is present at distance d (fades during transitions). */
   weight(d: number): number;
   groundHeight(x: number, d: number): number;

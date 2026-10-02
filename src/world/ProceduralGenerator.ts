@@ -2,6 +2,7 @@ import { CollectibleConfig, DifficultyConfig, PlayerConfig, WorldConfig } from '
 import { Difficulty } from '../core/Difficulty';
 import type { CollectibleType } from '../collectibles/CollectibleTypes';
 import type { MapId } from '../maps/MapDefinition';
+import { LEVEL_BREATHER } from '../config/MapConfig';
 import { OBSTACLE_SPECS } from '../obstacles/ObstacleCatalog';
 import type { ObstacleKind } from '../obstacles/ObstacleKinds';
 import { clamp, lerp } from '../utils/MathUtils';
@@ -77,10 +78,16 @@ export class ProceduralGenerator {
 
   constructor(private readonly maps: MapManager) {}
 
-  reset(seed: number): void {
+  /** First chunk with gameplay content (the run's starting chunk). */
+  private firstChunk = 0;
+  private boundaries: number[] = [];
+
+  reset(seed: number, startD = 0, boundaries: number[] = []): void {
     this.seed = seed;
     this.rng = new Random(hash32(seed, 0xc0ffee));
-    this.nextRowD = DifficultyConfig.graceDistance;
+    this.firstChunk = Math.floor(startD / WorldConfig.chunkLength);
+    this.boundaries = boundaries;
+    this.nextRowD = startD + DifficultyConfig.graceDistance;
     this.pathX = 0;
     this.pendingObstacles = [];
     this.pendingCollectibles = [];
@@ -104,7 +111,7 @@ export class ProceduralGenerator {
     const d0 = index * L;
     const d1 = d0 + L;
     const layout: ChunkLayout = { index, d0, d1, obstacles: [], collectibles: [], deformations: [], route: [] };
-    if (index < 0) return layout;
+    if (index < this.firstChunk) return layout;
 
     // Generate rows a little past this chunk so pre-row collectible trails land correctly.
     while (this.nextRowD < d1 + 14) this.generateRow();
@@ -146,7 +153,10 @@ export class ProceduralGenerator {
 
     // ---- 3. Fill the row ----
     const occupied: Interval[] = [];
-    const count = Math.floor(Difficulty.obstaclesPerRow(d) * tuning.density + rng.next());
+    // A clear breather around each level boundary while the title card plays.
+    const [before, after] = LEVEL_BREATHER;
+    const breather = this.boundaries.some((b) => d > b - before && d < b + after);
+    const count = breather ? 0 : Math.floor(Difficulty.obstaclesPerRow(d) * tuning.density + rng.next());
     const vaultOnPathChance = lerp(0.3, 0.75, difficulty);
     // Never demand a vault on the route two rows running — always time to land and recover.
     let pathBlocked = this.lastRowBlocked;

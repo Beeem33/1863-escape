@@ -11,7 +11,13 @@ export enum GameState {
 
 /** Live statistics for the current run. */
 export class RunStats {
+  /** Meters run this run (score). */
   distance = 0;
+  /** Journey distance where this run began (the start of the chosen level). */
+  startDistance = 0;
+  /** Level the run started on, and the level currently reached. */
+  startLevel = 1;
+  level = 1;
   collectibles = 0;
   mapPieces = 0;
   hits = 0;
@@ -19,8 +25,10 @@ export class RunStats {
   seed = 0;
   currentMap = '';
 
-  reset(seed: number): void {
+  reset(seed: number, startLevel = 1, startDistance = 0): void {
     this.distance = 0;
+    this.startDistance = startDistance;
+    this.startLevel = this.level = startLevel;
     this.collectibles = 0;
     this.mapPieces = 0;
     this.hits = 0;
@@ -41,6 +49,16 @@ export const Records = {
       return true;
     }
     return false;
+  },
+  /** Highest level unlocked (1 = only the first). */
+  get unlockedLevel(): number {
+    return Storage.get<number>('unlocked-level', 1);
+  },
+  /** Returns true if this newly unlocked a level. */
+  unlockLevel(level: number): boolean {
+    if (level <= this.unlockedLevel) return false;
+    Storage.set('unlocked-level', level);
+    return true;
   },
   get totalPieces(): number {
     return Storage.get<number>('total-pieces', 0);

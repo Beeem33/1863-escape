@@ -23,6 +23,8 @@ export interface GameEvents {
   'weather:thunder': { delay: number; strength: number };
   'collectible:pickup': { type: CollectibleType; x: number; z: number };
   'map:enter': { id: MapId; name: string; caption: string };
+  /** Crossed into a new level; `unlocked` = first time ever reaching it. */
+  'level:up': { level: number; unlocked: boolean };
   'pursuit:cue': { kind: PursuitCue; distance: number; pan: number };
   'pursuit:danger': { level: number };
   'battle:artillery': { x: number; z: number; distance: number; incoming: boolean };

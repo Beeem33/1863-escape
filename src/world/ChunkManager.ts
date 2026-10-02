@@ -161,7 +161,7 @@ export class ChunkManager {
       noise: this.terrain.noise,
       corridor,
       mapStart: this.maps.startOf(map.id, midD),
-      lap: this.maps.lapAt(midD),
+      level: this.maps.levelAt(midD),
       weight: (d) => this.maps.weightOf(map.id, d),
       groundHeight: (x, d) => this.groundHeight(x, d),
       isClear: (x, d, r, ahead = 0) => {

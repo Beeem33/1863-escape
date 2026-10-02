@@ -450,3 +450,29 @@ export function thunder(s: Synth, out: AudioNode, t: number, strength: number): 
   n.start(t, Math.random());
   n.stop(t + len + 1.2);
 }
+
+/** Level reached: a low, slow-swelling chord (no fanfare — this is not a victory yet). */
+export function sting(s: Synth, out: AudioNode, t: number): void {
+  for (const [freq, amp] of [
+    [65.4, 0.35],
+    [98, 0.25],
+    [130.8, 0.18],
+    [155.6, 0.12],
+  ]) {
+    for (const det of [-5, 5]) {
+      const o = s.osc('sawtooth', freq);
+      o.detune.value = det;
+      const f = s.filter('lowpass', 500, 0.5);
+      f.frequency.setValueAtTime(250, t);
+      f.frequency.linearRampToValueAtTime(900, t + 2.5);
+      f.frequency.linearRampToValueAtTime(300, t + 6);
+      const g = s.gain(0);
+      s.chain(o, f, g, out);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(amp * 0.25, t + 2.2);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 6.5);
+      o.start(t);
+      o.stop(t + 6.6);
+    }
+  }
+}

@@ -204,6 +204,10 @@ export class AudioManager {
           break;
       }
     });
+    this.bus.on('level:up', () => {
+      if (!ok()) return;
+      Sounds.sting(this.s, this.spatial(0, 0, 1), this.t);
+    });
     this.bus.on('weather:thunder', (e) => {
       if (!ok()) return;
       Sounds.thunder(this.s, this.spatial(20 + (1 - e.strength) * 300, Math.random() * 1.6 - 0.8, 1.6), this.t + e.delay, e.strength);
