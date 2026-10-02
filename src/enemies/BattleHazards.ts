@@ -4,7 +4,6 @@ import { Difficulty } from '../core/Difficulty';
 import type { EventBus } from '../core/EventBus';
 import type { Particles } from '../effects/Particles';
 import type { Player } from '../player/Player';
-import { lerp } from '../utils/MathUtils';
 import type { Random } from '../utils/Random';
 
 interface Shell {
@@ -64,8 +63,7 @@ export class BattleHazards {
   update(dt: number, p: Player, intensity: number, rng: Random, groundHeight: (x: number, d: number) => number): boolean {
     let knocked = false;
     if (intensity > 0.05) {
-      const diff = Difficulty.at(p.d);
-      const interval = lerp(HazardConfig.artilleryIntervalEasy, HazardConfig.artilleryIntervalHard, diff) / intensity;
+      const interval = Difficulty.artilleryInterval(p.d) / intensity;
       this.timer -= dt;
       if (this.timer <= 0) {
         this.timer = interval * rng.range(0.6, 1.4);

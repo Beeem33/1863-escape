@@ -6,6 +6,8 @@ import { Textures } from '../utils/TextureFactory';
 import { Materials, windUniforms } from './Materials';
 import type { MapBlend } from './MapManager';
 import { Sky } from './Sky';
+import type { WeatherSystem } from './Weather';
+import { WeatherConfig } from '../config/WeatherConfig';
 
 /**
  * Three.js uses physical light units (Lambert = albedo / π), so map
@@ -68,7 +70,7 @@ export class Environment {
 
   /** The blended atmosphere this frame (read by post-processing and audio). */
   readonly current: AtmosphereSettings;
-  weather: RunWeather = { sunAzimuthOffset: 0, sunElevationOffset: 0, fogMultiplier: 1, warmth: 0, windStrength: 1 };
+  variation: RunWeather = { sunAzimuthOffset: 0, sunElevationOffset: 0, fogMultiplier: 1, warmth: 0, windStrength: 1 };
   /** 0..1 lantern effect (pushes fog back). */
   lantern = 0;
 
@@ -137,7 +139,7 @@ export class Environment {
   }
 
   randomizeWeather(rng: Random): void {
-    this.weather = {
+    this.variation = {
       sunAzimuthOffset: rng.range(-35, 35),
       sunElevationOffset: rng.range(-3, 5),
       fogMultiplier: rng.range(0.8, 1.3),
@@ -181,11 +183,48 @@ export class Environment {
     return this.colors.get(key)!;
   }
 
-  update(dt: number, blend: MapBlend, camera: THREE.Camera, playerX: number, playerZ: number): void {
+  /**
+   * Layer the current weather over the map's blended atmosphere: more cloud,
+   * dimmer sun, thicker fog, storm-grey skies, washed-out colour, wet ground,
+   * and lightning flashes.
+   */
+  private applyWeather(ws: WeatherSystem): void {
+    const a = this.current;
+    const w = ws.state;
+    a.clouds = Math.min(0.97, Math.max(0, a.clouds + w.clouds));
+    a.sunIntensity *= w.sun;
+    a.hemiIntensity *= w.hemi;
+    a.fogDensity *= w.fog;
+    a.dust *= w.dust;
+    a.mist = Math.min(1, a.mist + w.mist);
+    a.exposure *= w.exposure;
+    a.grade.saturation *= w.saturation;
+    a.bloom *= 0.6 + 0.4 * w.sun;
+    const gloom = this.cb.setHex(WeatherConfig.gloomColor);
+    this.color('cloudColor').lerp(gloom, w.gloom * 0.8);
+    this.color('skyZenith').lerp(gloom, w.gloom * 0.65);
+    this.color('skyHorizon').lerp(gloom, w.gloom * 0.5);
+    this.color('fogColor').lerp(gloom, w.gloom * 0.35);
+    this.color('sunGlow').multiplyScalar(0.25 + 0.75 * w.sun);
+    // Lightning lights everything for a heartbeat.
+    if (ws.flash > 0) {
+      a.hemiIntensity += ws.flash * 2.5;
+      a.exposure += ws.flash * 0.35;
+      for (const k of ['skyZenith', 'skyHorizon', 'cloudColor'] as const) this.color(k).lerp(this.ca.setRGB(0.85, 0.88, 1), ws.flash * 0.6);
+    }
+    // Wet ground goes darker and glossier.
+    const ground = Materials().ground;
+    ground.roughness = lerp(0.96, 0.62, w.wet);
+    ground.color.setScalar(1 - 0.28 * w.wet);
+  }
+
+  update(dt: number, blend: MapBlend, camera: THREE.Camera, playerX: number, playerZ: number, weather: WeatherSystem | null = null): void {
     this.time += dt;
     this.blend(blend);
+    if (weather) this.applyWeather(weather);
     const a = this.current;
-    const w = this.weather;
+    const w = this.variation;
+    const windMul = weather ? weather.state.wind : 1;
 
     // ---- Sun ------------------------------------------------------------
     const elev = THREE.MathUtils.degToRad(Math.max(2, a.sunElevation + w.sunElevationOffset));
@@ -215,7 +254,7 @@ export class Environment {
     const u = this.sky.uniforms;
     u.zenith.value.copy(this.color('skyZenith'));
     u.horizon.value.copy(this.color('skyHorizon'));
-    u.sunColor.value.copy(this.color('sunColor'));
+    u.sunColor.value.copy(this.color('sunColor')).multiplyScalar(weather ? weather.state.sun ** 2 : 1);
     u.sunGlow.value.copy(this.color('sunGlow'));
     u.sunDir.value.copy(this.sunDir);
     u.cloudColor.value.copy(this.color('cloudColor'));
@@ -240,7 +279,7 @@ export class Environment {
 
     // ---- Wind ----------------------------------------------------------
     windUniforms.uTime.value = this.time;
-    windUniforms.uWindStrength.value = w.windStrength * (0.7 + a.smoke * 0.3);
+    windUniforms.uWindStrength.value = w.windStrength * windMul * (0.7 + a.smoke * 0.3);
 
     this.renderer.toneMappingExposure = a.exposure * (1 + this.lantern * 0.12);
     this.updateEnvMap(dt);

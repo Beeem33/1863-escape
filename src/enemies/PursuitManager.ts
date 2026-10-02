@@ -77,8 +77,7 @@ export class PursuitManager {
 
   /** The pursuers' current speed. */
   pursuerSpeed(distance: number): number {
-    const factor = lerp(PursuitConfig.speedFactorStart, PursuitConfig.speedFactorMax, Difficulty.at(distance));
-    return Difficulty.runSpeed(distance) * factor;
+    return Difficulty.runSpeed(distance) * Difficulty.pursuitFactor(distance);
   }
 
   update(dt: number, p: Player, darkness: number, rng: Random, groundHeight: (x: number, d: number) => number): void {

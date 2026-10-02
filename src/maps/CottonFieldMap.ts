@@ -100,13 +100,13 @@ export const CottonFieldMap: MapDefinition = {
           if (rng.chance(0.18 * (1 - w) + 0.05)) ctx.place('dryGrass', px, d, { scale: rng.range(0.7, 1.3) });
           continue;
         }
-        // Inside the running corridor the plants are sparser, shorter and kept
-        // clear of obstacles so hazards always read clearly.
+        // Cotton stands a little taller than a man (~1.9–2.1 m). Inside the
+        // running corridor it is sparser, and kept clear around obstacles and
+        // for several meters in front of them, so hazards always read.
         const inCorridor = Math.abs(px) < corridor + 0.5;
-        if (inCorridor && rng.chance(0.4)) continue;
-        if (!ctx.isClear(px, d, inCorridor ? 1.4 : 0.5)) continue;
-        const scale = inCorridor ? rng.range(0.55, 0.8) : rng.range(0.8, 1.15);
-        ctx.place('cottonPlant', px, d, { scale, scaleY: rng.range(0.85, 1.1), tilt: rng.range(-0.08, 0.08) });
+        if (inCorridor && rng.chance(0.62)) continue;
+        if (!ctx.isClear(px, d, inCorridor ? 1.5 : 0.5, inCorridor ? 7 : 0)) continue;
+        ctx.place('cottonPlant', px, d, { scale: rng.range(0.92, 1.08), scaleY: rng.range(0.93, 1.05), tilt: rng.range(-0.07, 0.07) });
       }
     }
 

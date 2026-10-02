@@ -42,6 +42,9 @@ export class Ambience {
     this.loop('trees', 'pink', [s.filter('highpass', 1800, 0.5)], 0.18);
     // Distant battle: low rolling rumble.
     this.loop('battle', 'brown', [s.filter('lowpass', 140, 0.7)], 1.1);
+    // Rain: a hiss on the leaves and ground, with a low patter underneath.
+    this.loop('rain', 'pink', [s.filter('highpass', 500, 0.5), s.filter('lowpass', 7500, 0.5)], 0.7);
+    this.loop('rainLow', 'brown', [s.filter('lowpass', 600, 0.6)], 0.5);
     // Fire: low roar.
     this.loop('fire', 'brown', [s.filter('bandpass', 300, 0.6)], 0.4);
 
@@ -87,9 +90,17 @@ export class Ambience {
     this.wanderers.push({ param, min, max, period });
   }
 
+  private rain = 0;
+  private windMul = 1;
+
   setProfile(p: AmbienceProfile, danger: number): void {
     this.profile = p;
     this.danger = danger;
+  }
+
+  setWeather(rain: number, wind: number): void {
+    this.rain = rain;
+    this.windMul = wind;
   }
 
   update(dt: number): void {
@@ -98,7 +109,9 @@ export class Ambience {
     const p = this.profile;
     const smooth = 1.2;
     const gust = 0.75 + 0.25 * Math.sin(t * 0.37) * Math.sin(t * 0.13);
-    this.layers.wind.gain.setTargetAtTime(p.wind * gust, t, smooth);
+    this.layers.wind.gain.setTargetAtTime(Math.min(1.2, p.wind * gust * this.windMul + this.rain * 0.15), t, smooth);
+    this.layers.rain.gain.setTargetAtTime(this.rain * 0.45, t, 2);
+    this.layers.rainLow.gain.setTargetAtTime(this.rain * 0.35, t, 2);
     this.layers.insects.gain.setTargetAtTime(p.insects * 0.6, t, smooth);
     this.layers.water.gain.setTargetAtTime(p.water * 0.7, t, smooth);
     this.layers.trees.gain.setTargetAtTime(p.trees * gust * 0.8, t, smooth);
@@ -114,9 +127,10 @@ export class Ambience {
     }
 
     // ---- Sparse events ----------------------------------------------------
-    this.every('bird', dt, p.birds, 0.9, 3.5, () => this.birdCall(t));
+    const dry = 1 - this.rain * 0.85;
+    this.every('bird', dt, p.birds * dry, 0.9, 3.5, () => this.birdCall(t));
     this.every('crow', dt, p.birds * (p.battle > 0.2 ? 0 : 0.35), 5, 14, () => this.crow(t));
-    this.every('cricket', dt, p.insects, 0.6, 2.5, () => this.cricket(t));
+    this.every('cricket', dt, p.insects * dry, 0.6, 2.5, () => this.cricket(t));
     this.every('frog', dt, p.frogs, 0.4, 2.2, () => this.frog(t));
     this.every('creak', dt, p.trees, 6, 16, () => this.creak(t));
     this.every('farGun', dt, p.battle, 0.25, 1.6, () => {

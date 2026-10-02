@@ -164,9 +164,10 @@ export class ChunkManager {
       lap: this.maps.lapAt(midD),
       weight: (d) => this.maps.weightOf(map.id, d),
       groundHeight: (x, d) => this.groundHeight(x, d),
-      isClear: (x, d, r) => {
+      isClear: (x, d, r, ahead = 0) => {
         for (const o of obstacles) {
-          if (Math.abs(x - o.x) < o.width / 2 + r && Math.abs(d - o.d) < o.depth / 2 + r) return false;
+          if (Math.abs(x - o.x) >= o.width / 2 + r) continue;
+          if (d < o.d + o.depth / 2 + r && d > o.d - o.depth / 2 - r - ahead) return false;
         }
         return true;
       },

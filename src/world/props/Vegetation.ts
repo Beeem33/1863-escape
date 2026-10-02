@@ -166,13 +166,14 @@ export function buildCottonPlant(): PropPart[] {
   const rng = new Random(7701);
   const M = Materials();
   const bolls: THREE.BufferGeometry[] = [];
-  for (let i = 0; i < 6; i++) {
+  // A tall plant — a little over head height — with bolls all the way up.
+  for (let i = 0; i < 8; i++) {
     const g = new THREE.OctahedronGeometry(rng.range(0.045, 0.07), 0);
-    g.translate(rng.range(-0.28, 0.28), rng.range(0.55, 1.05), rng.range(-0.28, 0.28));
+    g.translate(rng.range(-0.3, 0.3), rng.range(0.7, 1.95), rng.range(-0.3, 0.3));
     bolls.push(prep(g, 0xffffff));
   }
   return [
-    { geometry: crossedCards(1.0, 1.15, 3, rng), material: M.cotton },
+    { geometry: crossedCards(1.1, 2.0, 3, rng), material: M.cotton },
     { geometry: merge(bolls), material: M.cottonBoll },
   ];
 }

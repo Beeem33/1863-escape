@@ -16,8 +16,21 @@ export const windUniforms = {
  * Patch a material so its vertices sway in the wind, more at the top than the
  * bottom. Works with instanced meshes (each instance gets its own phase).
  */
-function addWind(mat: THREE.Material, strength: number, key: string): void {
+function addWind(mat: THREE.Material, strength: number, key: string, nearFade = false): void {
   mat.onBeforeCompile = (shader) => {
+    if (nearFade) {
+      // Dissolve (dithered) anything within ~1.5 m of the camera, so plants you
+      // run through never smear across the whole screen.
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <clipping_planes_fragment>',
+        `#include <clipping_planes_fragment>
+        {
+          float camDist = length(vViewPosition);
+          float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+          if (n > smoothstep(0.6, 1.6, camDist)) discard;
+        }`,
+      );
+    }
     shader.uniforms.uTime = windUniforms.uTime;
     shader.uniforms.uWindStrength = windUniforms.uWindStrength;
     shader.vertexShader = shader.vertexShader
@@ -113,10 +126,10 @@ function make(): {
     side: THREE.DoubleSide,
     roughness: 1,
   });
-  addWind(cotton, 0.07, 'wind-cotton');
+  addWind(cotton, 0.05, 'wind-cotton-tall', true);
 
   const cottonBoll = new THREE.MeshStandardMaterial({ color: 0xcfc9bc, roughness: 1 });
-  addWind(cottonBoll, 0.07, 'wind-cotton');
+  addWind(cottonBoll, 0.05, 'wind-cotton-boll', true);
 
   const wood = new THREE.MeshStandardMaterial({ map: Textures.wood(), vertexColors: true, roughness: 0.92 });
   const cloth = new THREE.MeshStandardMaterial({

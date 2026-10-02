@@ -1,4 +1,4 @@
-import { CollectibleConfig, PlayerConfig, StaminaConfig } from '../config/GameConfig';
+import { CollectibleConfig, FallConfig, PlayerConfig, StaminaConfig } from '../config/GameConfig';
 import type { EventBus, Surface } from '../core/EventBus';
 import { approach, clamp } from '../utils/MathUtils';
 import type { Player } from './Player';
@@ -16,6 +16,8 @@ export interface GroundQuery {
  * corridor, jumping, stamina and stride timing (which drives footsteps and
  * head bob).
  */
+const NO_INPUT: MovementIntent = { strafe: 0, push: false, ease: true, sprint: false, jump: false, lookBack: false };
+
 export class PlayerMovement {
   private jumpBufferTimer = 0;
   private wasSprinting = false;
@@ -26,6 +28,9 @@ export class PlayerMovement {
    * @param baseSpeed  the expected running speed at the current difficulty
    */
   update(p: Player, intent: MovementIntent, baseSpeed: number, ground: GroundQuery, dt: number): void {
+    this.updateFall(p, dt);
+    // Face down in the dirt: no control until he is back on his feet.
+    if (p.downed) intent = NO_INPUT;
     this.updateStamina(p, intent, dt);
     this.updateForward(p, intent, baseSpeed, dt);
     this.updateLateral(p, intent, dt);
@@ -37,6 +42,26 @@ export class PlayerMovement {
     p.boostTimer = Math.max(0, p.boostTimer - dt);
     p.lanternTimer = Math.max(0, p.lanternTimer - dt);
     p.knockedDown = Math.max(0, p.knockedDown - dt);
+  }
+
+  /** Start the face-plant sequence (see FallConfig). */
+  startFall(p: Player): void {
+    if (p.falling) return;
+    p.fallTime = 0;
+    p.fallSide = Math.random() < 0.5 ? -1 : 1;
+    p.invulnerableTimer = Math.max(p.invulnerableTimer, FallConfig.duration + 0.6);
+    p.sprinting = false;
+    this.bus.emit('player:fall', { stage: 'trip' });
+  }
+
+  private updateFall(p: Player, dt: number): void {
+    if (!p.falling) return;
+    const before = p.fallTime;
+    p.fallTime += dt;
+    const crossed = (t: number) => before < t && p.fallTime >= t;
+    if (crossed(FallConfig.impactAt)) this.bus.emit('player:fall', { stage: 'impact' });
+    if (crossed(FallConfig.pushUpAt)) this.bus.emit('player:fall', { stage: 'getup' });
+    if (p.fallTime >= FallConfig.duration) p.fallTime = -1;
   }
 
   private updateStamina(p: Player, intent: MovementIntent, dt: number): void {
@@ -88,8 +113,11 @@ export class PlayerMovement {
       target *= 1 - (1 - C.stumbleSpeedMultiplier) * k;
     }
     if (p.knockedDown > 0) target = 0;
+    // Pitching forward: momentum carries him a couple of meters, then he stops dead.
+    const fallingDown = p.downed;
+    if (fallingDown) target = 0;
 
-    const rate = target > p.speed ? C.forwardAcceleration : C.forwardDeceleration;
+    const rate = fallingDown ? (p.fallTime < FallConfig.impactAt ? 9 : 40) : target > p.speed ? C.forwardAcceleration : C.forwardDeceleration;
     // Airborne: keep momentum (no acceleration in the air).
     if (p.grounded || target < p.speed) p.speed = approach(p.speed, target, rate * dt);
     p.d += p.speed * dt;
@@ -98,7 +126,7 @@ export class PlayerMovement {
   private updateLateral(p: Player, intent: MovementIntent, dt: number): void {
     const C = PlayerConfig;
     const control = p.grounded ? 1 : 0.6; // a little less control mid-air
-    const knocked = p.knockedDown > 0 ? 0 : 1;
+    const knocked = p.knockedDown > 0 || p.downed ? 0 : 1;
     const target = intent.strafe * C.strafeSpeed * knocked;
     const accelerating = intent.strafe !== 0 && Math.sign(target) === Math.sign(p.vx || target);
     const rate = (accelerating ? C.strafeAcceleration : C.strafeDeceleration) * control;
@@ -123,7 +151,7 @@ export class PlayerMovement {
     if (intent.jump) this.jumpBufferTimer = C.jumpBuffer;
     else this.jumpBufferTimer = Math.max(0, this.jumpBufferTimer - dt);
 
-    const canJump = (p.grounded || p.airTime < C.coyoteTime) && p.vy <= 0 && p.knockedDown <= 0;
+    const canJump = (p.grounded || p.airTime < C.coyoteTime) && p.vy <= 0 && p.knockedDown <= 0 && !p.downed;
     if (this.jumpBufferTimer > 0 && canJump) {
       this.jumpBufferTimer = 0;
       p.vy = C.jumpVelocity;

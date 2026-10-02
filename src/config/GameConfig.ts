@@ -17,8 +17,10 @@ export const PlayerConfig = {
 
   /** Forward running speed at the start of a run (m/s). */
   baseRunSpeed: 9.0,
-  /** Forward running speed once difficulty is maxed out (m/s). */
+  /** Forward running speed at the end of the main difficulty ramp (m/s). */
   maxRunSpeed: 15.5,
+  /** Hard ceiling — the late "overdrive" ramp never pushes speed past this. */
+  absoluteMaxRunSpeed: 17.5,
   /** Multiplier while holding W (pushing harder). */
   pushMultiplier: 1.1,
   /** Multiplier while holding S (easing off — regains stamina, loses ground). */
@@ -56,6 +58,28 @@ export const PlayerConfig = {
   /** Speed multiplier immediately after a hit (recovers over `stumbleDuration`). */
   stumbleSpeedMultiplier: 0.35,
   stumbleDuration: 1.1,
+};
+
+/**
+ * Tripping over a LOW (vaultable) obstacle may send the runner flat on his
+ * face. Times are seconds from the moment of the trip; the whole sequence is
+ * `duration` long. Lying in the dirt costs ground — the pursuers keep coming.
+ */
+export const FallConfig = {
+  /** Chance a collision with a vaultable obstacle becomes a full fall. */
+  chance: 0.5,
+  /** Body hits the ground. */
+  impactAt: 0.55,
+  /** Starts pushing up off the ground. */
+  pushUpAt: 2.2,
+  /** On hands and knees, rising to his feet. */
+  kneelAt: 3.4,
+  /** Standing — starts running again. */
+  standAt: 4.1,
+  /** Sequence over (back to full control). */
+  duration: 5.0,
+  /** Extra pursuit gap lost on top of the time spent on the ground. */
+  extraDamage: 0,
 };
 
 export const StaminaConfig = {
@@ -96,12 +120,14 @@ export const CameraConfig = {
 
 export const PursuitConfig = {
   /** Distance between the runner and the pursuers at the start (m). */
-  startGap: 60,
+  startGap: 70,
   /** The gap never grows beyond this — they never truly lose the trail. */
   maxGap: 130,
   /** Pursuer speed as a fraction of the runner's expected speed at start / at max difficulty. */
   speedFactorStart: 0.92,
   speedFactorMax: 0.985,
+  /** Overdrive can push the factor further, but never past this. */
+  speedFactorCap: 0.998,
   /** Below this gap the HUD and audio signal danger. */
   dangerGap: 22,
   /** Visual glimpses of the pursuers appear at most this often (s). */
@@ -114,21 +140,29 @@ export const PursuitConfig = {
 
 export const DifficultyConfig = {
   /**
-   * Difficulty is a 0..1 value computed from distance:
-   *   difficulty = 1 - exp(-distance / rampDistance)
-   * so it climbs quickly at first and then levels off — never a wall.
+   * Difficulty is computed from distance in two parts:
+   *   main ramp:  1 - exp(-distance / rampDistance)            → 0..1
+   *   overdrive:  climbs linearly after lateRampStart           → 0..lateMax
+   * So it climbs quickly at first, then keeps getting harder slowly forever
+   * (up to 1 + lateMax). Values past 1 extrapolate the easy→hard ranges below
+   * and are clamped by the *Min / absolute limits so the game stays fair.
    */
-  rampDistance: 3200,
+  rampDistance: 2400,
+  lateRampStart: 4500,
+  lateRampDistance: 9000,
+  lateMax: 0.45,
 
-  /** Distance between obstacle rows at difficulty 0 and 1 (m). */
+  /** Distance between obstacle rows at difficulty 0 and 1 (m), and the floor. */
   rowSpacingEasy: 24,
-  rowSpacingHard: 12.5,
+  rowSpacingHard: 12,
+  rowSpacingMin: 9.5,
   /** Obstacles placed per row at difficulty 0 and 1. */
-  obstaclesPerRowEasy: 1.4,
-  obstaclesPerRowHard: 3.4,
-  /** Width of the guaranteed open route through every row (m). */
+  obstaclesPerRowEasy: 1.5,
+  obstaclesPerRowHard: 3.6,
+  /** Width of the guaranteed open route through every row (m), and the floor. */
   safePathWidthEasy: 4.6,
   safePathWidthHard: 3.0,
+  safePathWidthMin: 2.5,
   /** Fraction of the player's possible sideways travel the route may demand (safety margin). */
   routeShiftSafety: 0.55,
 
@@ -176,9 +210,10 @@ export const WorldConfig = {
 };
 
 export const HazardConfig = {
-  /** Battlefield artillery: seconds between strikes at difficulty 0 and 1. */
+  /** Battlefield artillery: seconds between strikes at difficulty 0 and 1, and the floor. */
   artilleryIntervalEasy: 9,
   artilleryIntervalHard: 3.6,
+  artilleryIntervalMin: 2.6,
   /** Warning time between the incoming whistle and the impact. */
   artilleryWarning: 1.6,
   /** Radius within which a shell knocks the runner down. */

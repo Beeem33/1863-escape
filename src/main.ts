@@ -9,3 +9,4 @@ game.start();
 
 // Handy for poking at the game from the browser console while developing.
 (window as unknown as { game: Game }).game = game;
+if (import.meta.env.DEV) void import('./dev/DevTools').then((m) => m.installDevTools(game));

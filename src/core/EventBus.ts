@@ -16,6 +16,11 @@ export interface GameEvents {
   'player:sprint': { active: boolean };
   'player:exhausted': { exhausted: boolean };
   'player:splash': { intensity: number };
+  /** Face-plant sequence: 'trip' (starts falling), 'impact' (hits the ground), 'getup' (pushes up). */
+  'player:fall': { stage: 'trip' | 'impact' | 'getup' };
+  'weather:change': { kind: string };
+  /** Lightning struck; thunder arrives after `delay` seconds. */
+  'weather:thunder': { delay: number; strength: number };
   'collectible:pickup': { type: CollectibleType; x: number; z: number };
   'map:enter': { id: MapId; name: string; caption: string };
   'pursuit:cue': { kind: PursuitCue; distance: number; pan: number };

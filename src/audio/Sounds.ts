@@ -421,3 +421,32 @@ export function heartbeat(s: Synth, out: AudioNode, t: number, strength: number)
     o.stop(t + off + 0.25);
   }
 }
+
+/** Thunder: an optional sharp crack, then a long rolling rumble. */
+export function thunder(s: Synth, out: AudioNode, t: number, strength: number): void {
+  if (strength > 0.65) {
+    const crack = s.noise('white');
+    const cg = s.gain(0);
+    s.chain(crack, s.filter('lowpass', 3000), cg, out);
+    s.envelope(cg.gain, t, 0.005, 0.35, 0.6 * strength);
+    crack.start(t, Math.random());
+    crack.stop(t + 0.5);
+  }
+  const n = s.noise('brown');
+  const f = s.filter('lowpass', 180, 0.7);
+  const g = s.gain(0);
+  s.chain(n, f, g, out);
+  const len = 3 + strength * 3;
+  g.gain.setValueAtTime(0.0001, t);
+  // Rolling: several swells as the sound comes back off the clouds.
+  let at = t;
+  for (let i = 0; i < 4; i++) {
+    const peak = (0.9 - i * 0.18) * strength;
+    g.gain.linearRampToValueAtTime(Math.max(0.02, peak), at + 0.15 + Math.random() * 0.3);
+    at += len / 4;
+    g.gain.linearRampToValueAtTime(Math.max(0.01, peak * 0.4), at);
+  }
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len + 1);
+  n.start(t, Math.random());
+  n.stop(t + len + 1.2);
+}

@@ -1,4 +1,4 @@
-import { PlayerConfig, StaminaConfig } from '../config/GameConfig';
+import { FallConfig, PlayerConfig, StaminaConfig } from '../config/GameConfig';
 import type { Surface } from '../core/EventBus';
 
 /**
@@ -49,6 +49,10 @@ export class Player {
 
   /** Set while the player is knocked down by a blast or caught. */
   knockedDown = 0;
+  /** Seconds since tripping flat on his face; < 0 when not falling. See FallConfig. */
+  fallTime = -1;
+  /** -1 / 1 — which way the fall twists (keeps each fall a little different). */
+  fallSide = 1;
 
   reset(): void {
     this.x = 0;
@@ -72,6 +76,16 @@ export class Player {
     this.inWater = false;
     this.surface = 'dirt';
     this.knockedDown = 0;
+    this.fallTime = -1;
+  }
+
+  get falling(): boolean {
+    return this.fallTime >= 0;
+  }
+
+  /** Movement control is lost from the trip until he is back on his feet. */
+  get downed(): boolean {
+    return this.fallTime >= 0 && this.fallTime < FallConfig.standAt;
   }
 
   get z(): number {

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { HazardConfig, PlayerConfig } from '../config/GameConfig';
+import { FallConfig, HazardConfig, PlayerConfig } from '../config/GameConfig';
 import type { EventBus } from '../core/EventBus';
 import type { Particles } from '../effects/Particles';
 import type { Player } from '../player/Player';
@@ -49,6 +49,8 @@ const REGISTRY: Record<ObstacleKind, () => Obstacle> = {
 export interface HitResult {
   obstacle: Obstacle;
   severity: number;
+  /** Tripped over a low obstacle and is going down on his face (see FallConfig). */
+  trip: boolean;
 }
 
 export class ObstacleManager {
@@ -116,12 +118,12 @@ export class ObstacleManager {
             if (p.grounded) slow = Math.min(slow, HazardConfig.mudSlow);
             break;
           case 'ground':
-            if (p.grounded && !hit && p.invulnerableTimer <= 0) hit = { obstacle: o, severity: 0.7 };
+            if (p.grounded && !hit && p.invulnerableTimer <= 0) hit = { obstacle: o, severity: 0.7, trip: false };
             break;
           case 'vault':
           case 'solid':
             // Cleared it if the feet are above the top (small forgiveness).
-            if (feet < b.height - 0.12 && !hit && p.invulnerableTimer <= 0) hit = { obstacle: o, severity: b.kind === 'solid' ? 1 : 0.8 };
+            if (feet < b.height - 0.12 && !hit && p.invulnerableTimer <= 0) hit = { obstacle: o, severity: b.kind === 'solid' ? 1 : 0.8, trip: b.kind === 'vault' && !p.falling && Math.random() < FallConfig.chance };
             break;
         }
       }
@@ -143,12 +145,14 @@ export class ObstacleManager {
     const o = h.obstacle;
     p.invulnerableTimer = PlayerConfig.hitInvulnerability;
     p.stumbleTimer = PlayerConfig.stumbleDuration;
-    p.speed *= h.severity >= 1 ? 0.35 : 0.55;
-    // Shove the runner sideways, away from the obstacle's centre.
+    p.speed *= h.trip ? 0.6 : h.severity >= 1 ? 0.35 : 0.55;
+    // Shove the runner sideways, away from the obstacle's centre (a trip pitches him forward instead).
     const dir = p.x < o.x ? -1 : 1;
-    p.vx = dir * o.knockback;
+    p.vx = h.trip ? 0 : dir * o.knockback;
     o.onHit(p.x, this.particles);
-    this.bus.emit('player:hit', { obstacle: o.kind, severity: h.severity, damage: o.damage * (h.severity >= 1 ? 1 : 0.8), x: o.x, z: -o.d });
+    // A fall costs its time on the ground instead of the usual gap penalty.
+    const damage = h.trip ? FallConfig.extraDamage : o.damage * (h.severity >= 1 ? 1 : 0.8);
+    this.bus.emit('player:hit', { obstacle: o.kind, severity: h.severity, damage, x: o.x, z: -o.d });
   }
 
   clear(): void {

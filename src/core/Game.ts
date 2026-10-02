@@ -6,11 +6,13 @@ import { PostProcessing } from '../effects/PostProcessing';
 import { BattleHazards } from '../enemies/BattleHazards';
 import { PursuitManager } from '../enemies/PursuitManager';
 import { Autopilot } from '../player/Autopilot';
+import { FirstPersonArms } from '../player/FirstPersonArms';
 import { PlayerSystem } from '../player/PlayerSystem';
 import { UIManager } from '../ui/UIManager';
 import { formatDistance } from '../utils/MathUtils';
 import { Random, hash32, makeSeed } from '../utils/Random';
 import { WorldManager } from '../world/WorldManager';
+import { WeatherSystem } from '../world/Weather';
 import { Difficulty } from './Difficulty';
 import { EventBus } from './EventBus';
 import { GameLoop } from './GameLoop';
@@ -43,6 +45,8 @@ export class Game {
   readonly ui: UIManager;
   readonly audio: AudioManager;
   readonly autopilot = new Autopilot();
+  readonly arms = new FirstPersonArms();
+  readonly weather = new WeatherSystem();
 
   state = GameState.Menu;
   private eventRng = new Random(1);
@@ -67,6 +71,8 @@ export class Game {
     this.camera = new THREE.PerspectiveCamera(this.settings.data.fov, 1, 0.1, 1500);
     this.input = new InputManager(canvas);
     this.players = new PlayerSystem(this.input, this.bus, this.camera, this.settings);
+    this.scene.add(this.players.view.body);
+    this.players.view.body.add(this.arms.root);
     this.world = new WorldManager(this.scene, this.renderer, this.bus);
     this.pursuit = new PursuitManager(this.scene, this.bus);
     this.hazards = new BattleHazards(this.scene, this.bus, this.world.particles);
@@ -133,10 +139,11 @@ export class Game {
     }, 900);
   }
 
-  private resetWorld(seed: number): void {
+  resetWorld(seed: number): void {
     this.stats.reset(seed);
     this.eventRng = new Random(hash32(seed, 77));
     this.world.reset(seed);
+    this.weather.reset(new Random(hash32(seed, 0x77e)));
     this.players.reset();
     this.pursuit.reset();
     this.hazards.reset();
@@ -191,6 +198,16 @@ export class Game {
       this.stats.hits++;
     });
     this.bus.on('player:land', (e) => view.kick(0.5 + e.impact * 1.2));
+    this.bus.on('player:fall', (e) => {
+      const p = this.players.player;
+      if (e.stage === 'impact') {
+        view.shake(0.55);
+        this.post.flash = Math.max(this.post.flash, 0.5);
+        this.world.particles.dustKick(p.x, p.y, p.z - 0.8, 3, 0x8a7458);
+      } else if (e.stage === 'getup') {
+        this.world.particles.dustKick(p.x, p.y, p.z - 0.5, 1, 0x8a7458);
+      }
+    });
     this.bus.on('battle:explosion', (e) => view.shake(Math.max(0, 0.7 - e.distance / 60)));
     this.bus.on('battle:cannon', (e) => view.shake(Math.max(0, 0.12 - e.distance / 1500)));
     this.bus.on('player:footstep', (e) => {
@@ -267,6 +284,7 @@ export class Game {
     if (i.wasPressed('F3')) this.world.obstacles.setDebug(!this.world.obstacles.debugEnabled);
     if (i.wasPressed('F4')) this.skipToNextMap();
     if (i.wasPressed('F5')) this.autopilotOn = !this.autopilotOn;
+    if (i.wasPressed('F6')) this.weather.cycle(this.bus);
   }
 
   /** Debug: jump to just before the next map transition. */
@@ -289,13 +307,15 @@ export class Game {
     const p = this.players.player;
     const baseSpeed = Difficulty.runSpeed(p.d);
 
+    if (this.state !== GameState.Paused) this.weather.update(dt, this.bus);
+
     switch (this.state) {
       case GameState.Menu: {
         // Attract mode: the autopilot jogs the trail; nothing can hurt it.
         const intent = this.autopilot.update(p, this.world.chunks, this.world.obstacles);
         this.players.update(dt, PlayerConfig.baseRunSpeed * 0.55, this.world.ground, intent);
         p.stamina = 100;
-        this.world.update(dt, p, this.camera);
+        this.world.update(dt, p, this.camera, this.weather);
         break;
       }
       case GameState.Playing:
@@ -306,7 +326,7 @@ export class Game {
         this.players.update(dt, 0, this.world.ground, 'none', this.stateTime > 0.4);
         p.speed *= Math.max(0, 1 - dt * 2.5);
         this.pursuit.update(dt, p, this.darkness(), this.eventRng, this.world.ground.height);
-        this.world.update(dt, p, this.camera);
+        this.world.update(dt, p, this.camera, this.weather);
         this.post.fade = Math.min(1, Math.max(0, (this.stateTime - 1.2) / (CAPTURE_SEQUENCE - 1.2)));
         this.post.danger = 1;
         if (this.stateTime >= CAPTURE_SEQUENCE) this.toGameOver();
@@ -320,8 +340,9 @@ export class Game {
     }
 
     if (this.state !== GameState.Paused) {
+      this.arms.update(dt, this.players.player);
       const p2 = this.players.player;
-      this.audio.update(dt, this.world.terrain.blendAt(p2.d), p2, this.state === GameState.Playing);
+      this.audio.update(dt, this.world.terrain.blendAt(p2.d), p2, this.state === GameState.Playing, this.weather.state);
     }
     this.post.update(dt, this.world.environment.current);
     this.post.render();
@@ -335,7 +356,8 @@ export class Game {
     this.players.update(dt, baseSpeed, this.world.ground, intent);
 
     if (this.godMode) p.invulnerableTimer = Math.max(p.invulnerableTimer, 0.1);
-    this.world.obstacles.collide(p);
+    const hit = this.world.obstacles.collide(p);
+    if (hit?.trip) this.players.movement.startFall(p);
     this.world.collectibles.collect(p);
     const battle = this.world.maps.weightOf('battlefield', p.d);
     this.hazards.update(dt, p, battle, this.eventRng, this.world.ground.height);
@@ -343,7 +365,7 @@ export class Game {
     this.pursuit.update(dt, p, this.darkness(), this.eventRng, this.world.ground.height);
 
     this.world.environment.lantern = Math.min(1, p.lanternTimer / 2);
-    this.world.update(dt, p, this.camera);
+    this.world.update(dt, p, this.camera, this.weather);
 
     this.stats.distance = p.d;
     this.stats.time += dt;
@@ -376,6 +398,7 @@ export class Game {
         `Player speed   ${p.speed.toFixed(2)} m/s  (base ${Difficulty.runSpeed(p.d).toFixed(2)})`,
         `Current map    ${this.world.mapName}${blend.t > 0 ? `  → ${blend.b.name} ${(blend.t * 100).toFixed(0)}%` : ''}`,
         `Lap            ${this.world.maps.lapAt(p.d)}`,
+        `Weather        ${this.weather.label}`,
         `Chunk          ${Math.floor(p.d / 40)}  (live ${this.world.chunks.chunks.size})`,
         `Difficulty     ${(Difficulty.at(p.d) * 100).toFixed(0)}%`,
         `Pursuit gap    ${this.pursuit.gap.toFixed(1)} m  danger ${(this.pursuit.danger * 100).toFixed(0)}%`,
@@ -387,7 +410,7 @@ export class Game {
         `Cotton inst.   ${cotton?.used ?? 0}/${cotton?.capacity ?? 0}`,
         `Best           ${formatDistance(Records.best)}`,
         '',
-        `F2 god mode ${this.godMode ? 'ON' : 'off'}   F3 collision boxes   F4 skip to next map   F5 autopilot ${this.autopilotOn ? 'ON' : 'off'}`,
+        `F2 god mode ${this.godMode ? 'ON' : 'off'}   F3 collision boxes   F4 skip to next map   F5 autopilot ${this.autopilotOn ? 'ON' : 'off'}   F6 next weather`,
       ];
     });
   }

@@ -273,38 +273,53 @@ export const Textures = {
   /** A cotton plant painted on a card: dry stems, a few leaves and open white bolls. */
   cotton(): THREE.Texture {
     return canvasTexture(
-      'cotton',
+      'cotton-tall',
       128,
-      128,
+      256,
       (ctx, w, h, rng) => {
         ctx.clearRect(0, 0, w, h);
         ctx.lineCap = 'round';
+        // A tall, woody plant: a few main stalks with side branches carrying bolls.
         const tips: [number, number][] = [];
-        for (let i = 0; i < 9; i++) {
-          const x0 = w / 2 + rng.range(-6, 6);
-          const x1 = w / 2 + rng.range(-0.42, 0.42) * w;
-          const y1 = rng.range(0.08, 0.55) * h;
-          ctx.strokeStyle = `rgb(${90 + rng.next() * 30},${62 + rng.next() * 20},${40})`;
-          ctx.lineWidth = 1.5 + rng.next() * 1.5;
+        for (let i = 0; i < 5; i++) {
+          const x0 = w / 2 + rng.range(-5, 5);
+          const x1 = w / 2 + rng.range(-0.3, 0.3) * w;
+          const y1 = rng.range(0.03, 0.2) * h;
+          ctx.strokeStyle = `rgb(${82 + rng.next() * 30},${56 + rng.next() * 20},${36})`;
+          ctx.lineWidth = 2 + rng.next() * 1.5;
           ctx.beginPath();
           ctx.moveTo(x0, h);
-          ctx.quadraticCurveTo((x0 + x1) / 2 + rng.range(-8, 8), (h + y1) / 2, x1, y1);
+          ctx.quadraticCurveTo((x0 + x1) / 2 + rng.range(-10, 10), (h + y1) / 2, x1, y1);
           ctx.stroke();
           tips.push([x1, y1]);
+          // Side branches along the stalk.
+          for (let b = 0; b < 4; b++) {
+            const t = rng.range(0.2, 0.8);
+            const bx = x0 + (x1 - x0) * t;
+            const by = h + (y1 - h) * t;
+            const ex = bx + rng.range(-0.3, 0.3) * w;
+            const ey = by - rng.range(10, 34);
+            ctx.lineWidth = 1 + rng.next();
+            ctx.beginPath();
+            ctx.moveTo(bx, by);
+            ctx.quadraticCurveTo((bx + ex) / 2, by - 4, ex, ey);
+            ctx.stroke();
+            tips.push([ex, ey]);
+          }
         }
-        // Dry leaves.
-        for (let i = 0; i < 22; i++) {
+        // Dry, reddening leaves.
+        for (let i = 0; i < 46; i++) {
           const [tx, ty] = tips[i % tips.length];
           const g = 60 + rng.next() * 50;
-          ctx.fillStyle = rng.chance(0.35) ? `rgb(${g * 1.4},${g * 0.75},${g * 0.4})` : `rgb(${g * 0.7},${g},${g * 0.45})`;
+          ctx.fillStyle = rng.chance(0.4) ? `rgb(${g * 1.4},${g * 0.75},${g * 0.4})` : `rgb(${g * 0.7},${g},${g * 0.45})`;
           ctx.beginPath();
-          ctx.ellipse(tx + rng.range(-10, 10), ty + rng.range(-4, 20), rng.range(3, 7), rng.range(2, 4), rng.next() * 3, 0, Math.PI * 2);
+          ctx.ellipse(tx + rng.range(-10, 10), ty + rng.range(-4, 24), rng.range(3, 7), rng.range(2, 4), rng.next() * 3, 0, Math.PI * 2);
           ctx.fill();
         }
         // Open bolls.
         for (const [tx, ty] of tips) {
-          if (!rng.chance(0.85)) continue;
-          const r = rng.range(4, 7);
+          if (!rng.chance(0.8)) continue;
+          const r = rng.range(4, 6.5);
           for (let k = 0; k < 4; k++) {
             const shade = 225 + rng.next() * 30;
             ctx.fillStyle = `rgb(${shade},${shade},${shade * 0.97})`;

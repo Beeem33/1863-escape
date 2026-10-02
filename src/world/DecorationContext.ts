@@ -40,6 +40,10 @@ export interface DecorationContext {
   groundHeight(x: number, d: number): number;
   place(kind: DecorKind, x: number, d: number, opts?: PlaceOptions): void;
   feature(kind: FeatureKind, x: number, d: number, params?: Record<string, number>): void;
-  /** False if an obstacle occupies this spot (avoid planting cotton through a wagon). */
-  isClear(x: number, d: number, radius: number): boolean;
+  /**
+   * False if an obstacle occupies this spot (avoid planting cotton through a
+   * wagon). `ahead` extends the keep-clear zone toward the approaching player
+   * so tall plants never hide an obstacle right before you reach it.
+   */
+  isClear(x: number, d: number, radius: number, ahead?: number): boolean;
 }

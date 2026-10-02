@@ -4,6 +4,7 @@ import type { Settings } from '../core/Settings';
 import type { Player } from '../player/Player';
 import { clamp, lerp } from '../utils/MathUtils';
 import type { MapBlend } from '../world/MapManager';
+import type { WeatherPreset } from '../config/WeatherConfig';
 import { Ambience } from './Ambience';
 import type { AmbienceProfile } from './AmbienceProfile';
 import * as Sounds from './Sounds';
@@ -161,6 +162,18 @@ export class AudioManager {
       if (e.obstacle !== 'artillery') Sounds.impact(this.s, this.spatial(0, 0, 1), this.t, wood, Math.min(1, e.severity));
       Sounds.grunt(this.s, this.spatial(0, 0), this.t + 0.03, 120 + Math.random() * 30, Math.min(1, e.severity));
     });
+    this.bus.on('player:fall', (e) => {
+      if (!ok()) return;
+      const out = this.spatial(0, 0, 1);
+      if (e.stage === 'trip') Sounds.breath(this.s, out, this.t, true, 1, 0.35);
+      else if (e.stage === 'impact') {
+        Sounds.impact(this.s, out, this.t, false, 1);
+        Sounds.footstep(this.s, out, this.t + 0.05, 'dirt', 1.6);
+        Sounds.grunt(this.s, out, this.t + 0.04, 105, 1);
+      } else {
+        Sounds.grunt(this.s, out, this.t, 125, 0.8);
+      }
+    });
     this.bus.on('player:sprint', (e) => {
       if (!ok() || !e.active) return;
       Sounds.breath(this.s, this.spatial(0, 0), this.t, true, 1, 0.3);
@@ -191,6 +204,10 @@ export class AudioManager {
           break;
       }
     });
+    this.bus.on('weather:thunder', (e) => {
+      if (!ok()) return;
+      Sounds.thunder(this.s, this.spatial(20 + (1 - e.strength) * 300, Math.random() * 1.6 - 0.8, 1.6), this.t + e.delay, e.strength);
+    });
     this.bus.on('pursuit:danger', (e) => (this.danger = e.level));
     this.bus.on('battle:volley', (e) => {
       if (!ok()) return;
@@ -217,13 +234,14 @@ export class AudioManager {
   }
 
   /** Per-frame: blend the ambience to the current map, breathe, heartbeat. */
-  update(dt: number, blend: MapBlend, player: Player, running: boolean): void {
+  update(dt: number, blend: MapBlend, player: Player, running: boolean, weather: WeatherPreset | null = null): void {
     if (!this.ctx || this.ctx.state !== 'running') return;
     const a = blend.a.ambience;
     const b = blend.b.ambience;
     const m = this.mixed as unknown as Record<string, number>;
     for (const k of Object.keys(m)) m[k] = lerp((a as unknown as Record<string, number>)[k], (b as unknown as Record<string, number>)[k], blend.t);
     this.ambience.setProfile(this.mixed, running ? this.danger : 0);
+    this.ambience.setWeather(weather?.rain ?? 0, weather?.wind ?? 1);
     this.ambience.update(dt);
     // A swampier, wetter space has more reverb.
     this.reverbReturn.gain.setTargetAtTime(0.35 + this.mixed.frogs * 0.3 + this.mixed.battle * 0.25, this.t, 1);
