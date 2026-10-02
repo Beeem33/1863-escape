@@ -40,6 +40,11 @@ export class PlayerCamera {
     this.dip = this.dipVelocity = this.trauma = 0;
   }
 
+  /** How far the head is turned from the body (radians) — arms hide when looking back. */
+  get headTurn(): number {
+    return Math.abs(this.yaw) + this.lookBackBlend * CameraConfig.lookBackYaw;
+  }
+
   /** Add camera shake (0..1). */
   shake(amount: number): void {
     this.trauma = Math.min(1, this.trauma + amount);

@@ -82,6 +82,16 @@ export const FallConfig = {
   extraDamage: 0,
 };
 
+/** Gunshot wounds. Three hits from full health ends the run. */
+export const HealthConfig = {
+  max: 100,
+  /** Health lost per musket ball. */
+  shotDamage: 34,
+  /** Seconds without being hit before wounds start to (slowly) stop hurting. */
+  regenDelay: 9,
+  regenPerSecond: 5,
+};
+
 export const StaminaConfig = {
   max: 100,
   /** Drain per second while running normally. */
@@ -132,6 +142,15 @@ export const PursuitConfig = {
   dangerGap: 22,
   /** Visual glimpses of the pursuers appear at most this often (s). */
   glimpseCooldown: 24,
+  /** Pursuers open fire when this close (m). 50 ft ≈ 15.24 m. */
+  fireRange: 15.24,
+  /** Seconds between shots from each rider [min, max]. */
+  fireInterval: [1.5, 2.8] as [number, number],
+  /** Base chance a shot hits at the edge of range / point blank. */
+  hitChanceFar: 0.22,
+  hitChanceNear: 0.55,
+  /** Moving sideways at full strafe speed subtracts this much hit chance. */
+  dodgeBonus: 0.22,
   /** Seconds between distant audio cues (shouts, dogs, horses) at a large gap. */
   cueIntervalFar: 9,
   /** Seconds between audio cues when they are close. */

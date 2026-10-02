@@ -29,3 +29,10 @@ export const ENDINGS: Record<MapId, string[]> = {
   swamp: ['The hounds found the trail in the swamp.', 'The water could not hide you this time.'],
   battlefield: ['Taken within sight of the Union lines.', 'So close. The smoke was not enough.'],
 };
+
+/** Endings when the riders' guns found their mark. */
+export const SHOT_ENDINGS: Record<MapId, string[]> = {
+  cotton: ['Shot down in the furrows, the tree line in sight.', 'The riders fired before you reached the trees.'],
+  swamp: ['A rider fired into the reeds. The swamp went quiet.', 'Shot at the water’s edge.'],
+  battlefield: ['Cut down in the crossfire, short of the lines.', 'Shot running for the Union lines.'],
+};

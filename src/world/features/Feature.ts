@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { EventBus } from '../../core/EventBus';
 import type { Particles } from '../../effects/Particles';
+import type { Characters } from '../../characters/Characters';
 import type { Random } from '../../utils/Random';
 
 export interface FeatureContext {
@@ -10,6 +11,7 @@ export interface FeatureContext {
   playerD: number;
   particles: Particles;
   bus: EventBus;
+  characters: Characters;
 }
 
 /**
@@ -36,6 +38,9 @@ export abstract class Feature {
   protected abstract configure(params: Record<string, number>, rng: Random): void;
 
   abstract update(ctx: FeatureContext): void;
+
+  /** Called when the feature returns to the pool — free any characters it owns. */
+  dispose(_ctx: { characters: Characters }): void {}
 
   /** Distance from the player (m) — for level-of-detail and audio. */
   protected distanceTo(ctx: FeatureContext): number {

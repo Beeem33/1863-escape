@@ -160,6 +160,19 @@ export const Anim = {
     return out;
   },
 
+  /** Mounted, rifle raised and aimed back/forward along −Z of the figure. */
+  rideAim(out: HumanPose, t: number, recoil = 0): HumanPose {
+    Anim.ride(out, t, true);
+    out.spinePitch = 0.02 - recoil * 0.12;
+    out.spineYaw = 0.3;
+    out.headYaw = -0.3;
+    out.headPitch = 0.05;
+    out.rArm = [1.25, 0.55, 1.75];
+    out.lArm = [1.45, -0.05, 0.35];
+    out.rifle = 'aim';
+    return out;
+  },
+
   /** Lying dead on the ground. `variant` picks one of several natural sprawls. */
   lying(out: HumanPose, variant: number): HumanPose {
     const v = Math.abs(Math.floor(variant)) % 4;

@@ -4,6 +4,7 @@ import type { FeatureKind } from '../DecorKinds';
 import { Birds, SignalLantern } from './AmbientFeatures';
 import { CannonBattery, Fire, Flag, SmokeColumn, SoldierLine } from './BattleFeatures';
 import type { Feature, FeatureContext } from './Feature';
+import type { Characters } from '../../characters/Characters';
 
 /**
  * Registry + pool for animated set pieces. To add one: subclass Feature,
@@ -25,7 +26,10 @@ export class FeatureManager {
   private active = new Set<Feature>();
   private kinds = new Map<Feature, FeatureKind>();
 
-  constructor(scene: THREE.Scene) {
+  constructor(
+    scene: THREE.Scene,
+    private readonly characters: Characters,
+  ) {
     this.group.name = 'features';
     scene.add(this.group);
   }
@@ -43,6 +47,7 @@ export class FeatureManager {
 
   release(f: Feature): void {
     if (!this.active.delete(f)) return;
+    f.dispose({ characters: this.characters });
     this.group.remove(f.object);
     this.pools.get(this.kinds.get(f)!)!.push(f);
   }

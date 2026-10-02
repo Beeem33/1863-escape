@@ -5,6 +5,7 @@ import { ObstacleManager } from '../obstacles/ObstacleManager';
 import { AmbientEffects } from '../effects/AmbientEffects';
 import { Particles } from '../effects/Particles';
 import { Rain } from '../effects/Rain';
+import { Characters } from '../characters/Characters';
 import type { WeatherSystem } from './Weather';
 import type { MapDefinition } from '../maps/MapDefinition';
 import type { GroundQuery } from '../player/PlayerMovement';
@@ -35,6 +36,7 @@ export class WorldManager {
   readonly obstacles: ObstacleManager;
   readonly collectibles: CollectibleManager;
   readonly rain: Rain;
+  readonly characters: Characters;
   /** 0..1 — how wet the ground is (set from the weather each frame). */
   private wetness = 0;
   private splashAcc = 0;
@@ -60,7 +62,8 @@ export class WorldManager {
     this.terrain = new Terrain(this.maps);
     this.generator = new ProceduralGenerator(this.maps);
     this.decor = new DecorationLibrary(scene);
-    this.features = new FeatureManager(scene);
+    this.characters = new Characters(scene);
+    this.features = new FeatureManager(scene, this.characters);
     this.chunks = new ChunkManager(scene, this.generator, this.terrain, this.maps, this.decor, this.features);
     this.environment = new Environment(scene, renderer);
     this.particles = new Particles(scene);
@@ -139,7 +142,8 @@ export class WorldManager {
 
     this.obstacles.update(dt, this.time, player.d);
     this.collectibles.update(dt, this.time);
-    this.features.update({ dt, time: this.time, playerX: player.x, playerD: player.d, particles: this.particles, bus: this.bus });
+    this.features.update({ dt, time: this.time, playerX: player.x, playerD: player.d, particles: this.particles, bus: this.bus, characters: this.characters });
+    this.characters.update(dt, camera.position);
     const cam = camera.position;
     this.ambient.update(dt, this.environment.current, cam.x, cam.y, cam.z, player.speed);
 

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { AudioManager } from '../audio/AudioManager';
-import { CollectibleConfig, GraphicsConfig, PlayerConfig } from '../config/GameConfig';
-import { ENDINGS, ROUTE_FRAGMENTS } from '../config/Story';
+import { CollectibleConfig, FallConfig, GraphicsConfig, HealthConfig, PlayerConfig } from '../config/GameConfig';
+import { ENDINGS, ROUTE_FRAGMENTS, SHOT_ENDINGS } from '../config/Story';
 import { PostProcessing } from '../effects/PostProcessing';
 import { BattleHazards } from '../enemies/BattleHazards';
 import { PursuitManager } from '../enemies/PursuitManager';
@@ -74,7 +74,7 @@ export class Game {
     this.scene.add(this.players.view.body);
     this.players.view.body.add(this.arms.root);
     this.world = new WorldManager(this.scene, this.renderer, this.bus);
-    this.pursuit = new PursuitManager(this.scene, this.bus);
+    this.pursuit = new PursuitManager(this.bus, this.world.characters, this.world.particles);
     this.hazards = new BattleHazards(this.scene, this.bus, this.world.particles);
     this.post = new PostProcessing(this.renderer, this.scene, this.camera);
     this.audio = new AudioManager(this.bus, this.settings);
@@ -191,9 +191,14 @@ export class Game {
     if (this.settings.data.mouseLook) this.input.requestPointerLock();
   }
 
-  private beginCapture(): void {
+  /** How the run is ending: run down by the riders, or shot. */
+  private endCause: 'caught' | 'shot' = 'caught';
+
+  private beginCapture(cause: 'caught' | 'shot'): void {
+    this.endCause = cause;
     this.state = GameState.Dying;
     this.stateTime = 0;
+    if (cause === 'shot') this.players.movement.startFall(this.players.player);
     this.input.exitPointerLock();
   }
 
@@ -204,7 +209,7 @@ export class Game {
     const isNewBest = Records.submit(distance);
     Records.addPieces(this.stats.mapPieces);
     const mapId = this.world.map?.id ?? 'cotton';
-    const cause = this.eventRng.pick(ENDINGS[mapId]);
+    const cause = this.eventRng.pick(this.endCause === 'shot' ? SHOT_ENDINGS[mapId] : ENDINGS[mapId]);
     this.ui.hud.hide();
     this.ui.captions.clear();
     this.ui.gameOver.open({ distance, best: Records.best, pieces: this.stats.mapPieces, isNewBest, cause });
@@ -220,6 +225,11 @@ export class Game {
       view.kick(1.5 * e.severity);
       this.post.flash = Math.min(1, 0.45 + e.severity * 0.3);
       this.stats.hits++;
+    });
+    this.bus.on('player:wounded', () => {
+      view.shake(0.6);
+      view.kick(2);
+      this.post.flash = 1;
     });
     this.bus.on('player:land', (e) => view.kick(0.5 + e.impact * 1.2));
     this.bus.on('player:fall', (e) => {
@@ -344,10 +354,11 @@ export class Game {
         this.updatePlaying(dt, baseSpeed);
         break;
       case GameState.Dying: {
-        // Caught: legs give out, the head turns to see them.
-        this.players.update(dt, 0, this.world.ground, 'none', this.stateTime > 0.4);
+        // Caught: legs give out, the head turns to see them. Shot: he goes down and stays down.
+        this.players.update(dt, 0, this.world.ground, 'none', this.endCause === 'caught' && this.stateTime > 0.4);
+        if (this.endCause === 'shot') p.fallTime = Math.min(p.fallTime, FallConfig.pushUpAt - 0.3);
         p.speed *= Math.max(0, 1 - dt * 2.5);
-        this.pursuit.update(dt, p, this.darkness(), this.eventRng, this.world.ground.height);
+        this.pursuit.update(dt, p, this.eventRng, this.world.ground.height);
         this.world.update(dt, p, this.camera, this.weather);
         this.post.fade = Math.min(1, Math.max(0, (this.stateTime - 1.2) / (CAPTURE_SEQUENCE - 1.2)));
         this.post.danger = 1;
@@ -363,6 +374,7 @@ export class Game {
 
     if (this.state !== GameState.Paused) {
       this.arms.update(dt, this.players.player);
+      this.arms.root.visible = this.players.view.headTurn < 1.1;
       const p2 = this.players.player;
       this.audio.update(dt, this.world.terrain.blendAt(p2.d), p2, this.state === GameState.Playing, this.weather.state);
     }
@@ -384,7 +396,7 @@ export class Game {
     const battle = this.world.maps.weightOf('battlefield', p.d);
     this.hazards.update(dt, p, battle, this.eventRng, this.world.ground.height);
     if (this.godMode) this.pursuit.gap = Math.max(this.pursuit.gap, 40);
-    this.pursuit.update(dt, p, this.darkness(), this.eventRng, this.world.ground.height);
+    this.pursuit.update(dt, p, this.eventRng, this.world.ground.height);
 
     this.world.environment.lantern = Math.min(1, p.lanternTimer / 2);
     this.world.update(dt, p, this.camera, this.weather);
@@ -409,10 +421,12 @@ export class Game {
     this.ui.hud.update(p, this.stats.distance, this.stats.mapPieces, this.pursuit.gap, levelText);
     this.ui.hud.setHint(this.settings.data.mouseLook && !this.input.pointerLocked && this.stateTime > 1.5);
 
-    this.post.danger = this.pursuit.danger;
+    const wound = 1 - Math.max(0, p.health) / HealthConfig.max;
+    this.post.danger = Math.max(this.pursuit.danger, wound * 0.75);
     this.post.desaturate = p.exhausted ? 1 : Math.max(0, 0.3 - p.staminaFraction) * 2;
 
-    if (this.pursuit.caught) this.beginCapture();
+    if (this.pursuit.shotDown) this.beginCapture('shot');
+    else if (this.pursuit.caught) this.beginCapture('caught');
   }
 
   /** 0..1 — how dark the scene is (pursuers light lanterns). */

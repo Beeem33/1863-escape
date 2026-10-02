@@ -213,6 +213,17 @@ export class AudioManager {
       Sounds.thunder(this.s, this.spatial(20 + (1 - e.strength) * 300, Math.random() * 1.6 - 0.8, 1.6), this.t + e.delay, e.strength);
     });
     this.bus.on('pursuit:danger', (e) => (this.danger = e.level));
+    this.bus.on('pursuit:shot', (e) => {
+      if (!ok()) return;
+      // The report from behind, then the ball: a whiz past your ear or a hit.
+      Sounds.gunshot(this.s, this.spatial(e.distance, e.pan, 1.4, true), this.t, 1);
+      if (e.hit) {
+        Sounds.impact(this.s, this.spatial(0, 0, 0.8), this.t + 0.04, false, 0.9);
+        Sounds.grunt(this.s, this.spatial(0, 0), this.t + 0.07, 115, 1);
+      } else {
+        Sounds.whiz(this.s, this.spatial(2, Math.random() * 1.4 - 0.7, 1), this.t + 0.03);
+      }
+    });
     this.bus.on('battle:volley', (e) => {
       if (!ok()) return;
       if (e.distance < 8) {

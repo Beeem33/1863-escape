@@ -84,6 +84,7 @@ export class HUD {
     if (p.boostTimer > 0) fx.push(`Horseshoe ${Math.ceil(p.boostTimer)}`);
     if (p.lanternTimer > 0) fx.push(`Lantern ${Math.ceil(p.lanternTimer)}`);
     if (p.exhausted) fx.push('Exhausted');
+    if (p.health < 99) fx.push(p.health < 40 ? 'Badly wounded' : 'Wounded');
     const text = fx.join('   ·   ');
     if (this.effects.textContent !== text) this.effects.textContent = text;
 

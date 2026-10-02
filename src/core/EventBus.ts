@@ -27,6 +27,9 @@ export interface GameEvents {
   'level:up': { level: number; unlocked: boolean };
   'pursuit:cue': { kind: PursuitCue; distance: number; pan: number };
   'pursuit:danger': { level: number };
+  /** A pursuer fired at the runner. */
+  'pursuit:shot': { hit: boolean; distance: number; pan: number };
+  'player:wounded': { health: number };
   'battle:artillery': { x: number; z: number; distance: number; incoming: boolean };
   'battle:explosion': { x: number; z: number; distance: number; strength: number };
   'battle:volley': { distance: number; pan: number; count: number };

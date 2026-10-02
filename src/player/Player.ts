@@ -1,4 +1,4 @@
-import { FallConfig, PlayerConfig, StaminaConfig } from '../config/GameConfig';
+import { FallConfig, HealthConfig, PlayerConfig, StaminaConfig } from '../config/GameConfig';
 import type { Surface } from '../core/EventBus';
 
 /**
@@ -30,6 +30,9 @@ export class Player {
   stride = 0;
 
   stamina = StaminaConfig.max;
+  health = HealthConfig.max;
+  /** Seconds since last wounded. */
+  sinceHit = 99;
   sprinting = false;
   exhausted = false;
 
@@ -66,6 +69,8 @@ export class Player {
     this.airTime = 0;
     this.stride = 0;
     this.stamina = StaminaConfig.max;
+    this.health = HealthConfig.max;
+    this.sinceHit = 99;
     this.sprinting = false;
     this.exhausted = false;
     this.stumbleTimer = 0;
