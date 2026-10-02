@@ -23,6 +23,8 @@ interface Soldier {
   down: number;
   variant: number;
   recoil: number;
+  /** Fixed per-man pace multiplier (some run faster than others). */
+  pace: number;
   /** Pose at the moment he was hit (falls from here). */
   from: HumanPose | null;
 }
@@ -40,7 +42,7 @@ abstract class Unit extends Feature {
       const h = ctx.characters.humans.spawn(style);
       if (!h) break;
       const [ox, oz] = place(i);
-      this.soldiers.push({ h, ox, oz, phase: rng.range(0, Math.PI * 2), down: -1, variant: rng.int(0, 3), recoil: 0, from: null });
+      this.soldiers.push({ h, ox, oz, phase: rng.range(0, Math.PI * 2), down: -1, variant: rng.int(0, 3), recoil: 0, pace: rng.range(0.9, 1.1), from: null });
     }
   }
 
@@ -182,14 +184,15 @@ export class Charge extends Unit {
     this.travel += this.speed * ctx.dt;
     const yaw = this.dir > 0 ? -Math.PI / 2 : Math.PI / 2;
     for (const s of this.soldiers) {
-      const x = this.x + s.ox + this.dir * this.travel * (0.9 + 0.2 * Math.sin(s.phase));
+      const x = this.x + s.ox + this.dir * this.travel * s.pace;
       const d = this.d + s.oz;
       const gy = ctx.groundHeight(x, d);
       if (s.down >= 0) {
         if (!s.h.isStatic) this.fall(s, ctx.dt, yaw, x, gy + BODY.hipHeight, -d);
         continue;
       }
-      s.phase += ctx.dt * (this.speed * 1.6);
+      // Stride cadence matched to ground speed (~1.3 m steps; 2π per two steps).
+      s.phase += ctx.dt * ((this.speed * s.pace * Math.PI) / 1.3);
       const bob = Anim.run(s.h.pose, s.phase, 0.9, true);
       s.h.pose.x = x;
       s.h.pose.y = gy + BODY.hipHeight + bob;
@@ -238,7 +241,7 @@ export class Formation extends Unit {
     for (const s of this.soldiers) {
       const x = this.x + s.ox;
       const d = this.d + s.oz - this.dirZ * this.travel;
-      const phase = ctx.time * 2.2 + (s.oz > 0 ? 0 : 0); // marching in step
+      const phase = (ctx.time * speed * Math.PI) / 0.75; // in step: 0.75 m paces
       const bob = this.marching ? Anim.run(s.h.pose, phase, 0.35, false) : 0;
       if (!this.marching) Anim.stand(s.h.pose, ctx.time + s.phase);
       s.h.pose.rifle = 'slung';
@@ -282,7 +285,7 @@ export class Corpses extends Unit {
       h.pose.yaw = rng.range(0, Math.PI * 2);
       h.isStatic = true;
       h.dirty = true;
-      this.soldiers.push({ h, ox: 0, oz: 0, phase: 0, down: 1, variant: 0, recoil: 0, from: null });
+      this.soldiers.push({ h, ox: 0, oz: 0, phase: 0, down: 1, variant: 0, recoil: 0, pace: 1, from: null });
     }
   }
 }

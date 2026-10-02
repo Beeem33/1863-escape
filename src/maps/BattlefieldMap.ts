@@ -136,7 +136,7 @@ export const BattlefieldMap: MapDefinition = {
     // A charge across the field, well ahead.
     if (rng.chance(0.28 * w)) {
       const dir = rng.sign();
-      ctx.feature('charge', -dir * rng.range(40, 55), rng.range(d0 + 10, d1 - 10), { army: dir > 0 ? 1 : 0, count: rng.int(14, 24), dirX: dir, speed: rng.range(4, 5.5) });
+      ctx.feature('charge', -dir * rng.range(40, 55), rng.range(d0 + 10, d1 - 10), { army: dir > 0 ? 1 : 0, count: rng.int(14, 24), dirX: dir, speed: rng.range(3, 4) });
     }
     // The fallen.
     if (w > 0.3) {

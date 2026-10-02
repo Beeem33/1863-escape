@@ -79,14 +79,15 @@ export class FirstPersonArms {
     // ---- The face-plant sequence -----------------------------------------
     let snappy = 22;
     if (p.falling) {
-      const fall = this.fallPose(p.fallTime);
+      const impact = p.fallBody.impactAt >= 0 ? p.fallBody.impactAt : FallConfig.impactAt;
+      const fall = this.fallPose(p.fallTime, impact);
       if (fall) {
         Object.assign(this.targetR, fall);
         // The off-hand lands a beat later and a little wider.
-        const lag = this.fallPose(Math.max(0, p.fallTime - 0.08));
+        const lag = this.fallPose(Math.max(0, p.fallTime - 0.08), impact);
         if (lag) Object.assign(this.targetL, lag);
         this.targetL.abduct += 0.08;
-        snappy = p.fallTime < FallConfig.impactAt ? 16 : 10;
+        snappy = p.fallTime < impact ? 18 : 10;
       }
     }
 
@@ -107,15 +108,15 @@ export class FirstPersonArms {
   }
 
   /** Arm pose at time t into the fall, or null once he is running again. */
-  private fallPose(t: number): ArmPose | null {
+  private fallPose(t: number, impact: number): ArmPose | null {
     const F = FallConfig;
-    if (t < F.impactAt) {
+    if (t < impact) {
       // Throw the hands out to catch himself.
-      return mix(HANGING, BRACE, smoothstep(0, F.impactAt * 0.7, t), this.tmpA);
+      return mix(HANGING, BRACE, smoothstep(0, F.impactAt * 0.6, t), this.tmpA);
     }
     if (t < F.pushUpAt) {
-      // Palms flat in the dirt beside his head.
-      const k = smoothstep(F.impactAt, F.impactAt + 0.35, t);
+      // Elbows buckle; palms flat in the dirt beside his head.
+      const k = smoothstep(impact - 0.05, impact + 0.25, t);
       mix(BRACE, PLANTED, k, this.tmpA);
       this.tmpA.curl += Math.sin(t * 5.5) * 0.04; // fingers digging in as he breathes
       return this.tmpA;

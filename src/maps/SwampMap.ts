@@ -24,6 +24,12 @@ const marsh = (x: number, d: number, n: Noise2D) => -0.5 + (n.fbm(x * 0.045, d *
 /** The trail meanders a little; the corridor itself stays dry-ish. */
 const trailCenter = (d: number) => Math.sin(d * 0.017 + 2) * 3.2;
 
+/** Where (m into the level) the hanging trees stand, and on which side. */
+const SWAMP_HANGING_SPOTS: [number, number][] = [
+  [640, 1],
+  [1450, -1],
+];
+
 export const SwampMap: MapDefinition = {
   id: 'swamp',
   name: 'The Swamp',
@@ -155,13 +161,14 @@ export const SwampMap: MapDefinition = {
       ctx.feature('signalLantern', x, d, { height: rng.range(2.6, 3.4) });
     }
 
-    // ---- Rarely: a man hanged as a warning to others who would run ----------
-    if (rng.chance(0.03 * ctx.weight(d0))) {
-      const side = rng.sign();
-      const x = side * rng.range(corridor + 5, corridor + 15);
-      const d = rng.range(d0 + 8, d1 - 8);
-      ctx.place('oakMoss', x, d, { scale: 1.05, rotY: rng.range(0, Math.PI * 2) });
-      ctx.feature('hangingTree', x, d, { facing: (side > 0 ? Math.PI : 0) + rng.range(-0.35, 0.35) });
+    // ---- A man hanged as a warning to others who would run (fixed spots) ---
+    for (const [at, side] of SWAMP_HANGING_SPOTS) {
+      const d = ctx.mapStart + at;
+      if (d < d0 || d >= d1) continue;
+      const x = side * (corridor + 3.6);
+      ctx.place('oak', x + side * 0.4, d, { scale: 1.0, rotY: rng.range(0, Math.PI * 2), tint: 0xb8c8a0 });
+      ctx.feature('hangingTree', x, d, { facing: (side > 0 ? Math.PI : 0) + rng.range(-0.1, 0.1) });
+      ctx.feature('birds', x, d, { count: 6, radius: 7, height: 11 });
     }
 
     // ---- An abandoned trapper's shack deep in the trees ------------------

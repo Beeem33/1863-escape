@@ -26,8 +26,8 @@ about survival, escape, uncertainty and freedom, and there is no gore.
 
 The run never stops at a level boundary. The next map blends in, an
 obstacle-free breather opens up, letterbox bars slide in with the level title,
-and the level is **unlocked permanently**. Once more than one level is
-unlocked, **Play** lets you choose where the journey begins.
+and the level is marked as **reached**. Any level can be chosen as the
+starting point straight from the main menu.
 
 ---
 
@@ -51,8 +51,18 @@ can be vaulted. Tall ones (wagons, rocks, barricades, fires) must be avoided.
 There is always a way through.
 
 **Tripping:** hitting a low obstacle has a 50% chance to send you flat on
-your face. You lie in the dirt and push yourself up, about 5 seconds in
-all, while the riders close in.
+your face. The fall is simulated, not keyframed: your caught feet drag, your
+body topples under gravity, your hands hit first, then your chest, and you
+slide to a stop with your head whipping down and your shoulders rolling onto
+one side. Then you push yourself up, about 5 seconds in all, while the riders
+close in.
+
+**Along the way:** every half-minute or so another man breaks from cover and
+crosses the trail about 25 m ahead of you, with soldiers or a rider after him.
+In the cotton fields these crossings happen on cart lanes, with the stalks
+cut down for a stretch before each lane so you can see them. Each of the
+first two levels has two hanging trees close beside the trail, with crows
+circling above.
 
 **Gunfire:** inside 50 ft (15.2 m) the riders shoot. Moving sideways makes
 you harder to hit. Three hits ends the run; wounds ease if you stay out of
@@ -134,7 +144,8 @@ src/
 │   ├── Player.ts                Pure state
 │   ├── PlayerController.ts      Key bindings → MovementIntent
 │   ├── PlayerMovement.ts        Physics: run, strafe, jump, stamina, stride timing
-│   ├── PlayerCamera.ts          Head bob, sway, roll, FOV, shake, mouse look, glance back, fall choreography
+│   ├── PlayerCamera.ts          Head bob, sway, roll, FOV, shake, mouse look, glance back
+│   ├── FallBody.ts              The simulated body through a trip: topple, impact, slide, get up
 │   ├── PlayerSystem.ts          Bundles the above
 │   ├── ArmModel.ts              First-person arm rig (jointed fingers, sleeves)
 │   ├── FirstPersonArms.ts       Arm animation: running pump, jumps, the fall
@@ -343,9 +354,10 @@ Everything is in `src/config/`. No system code needs to change.
 | Pursuit speed / pressure | `PursuitConfig.speedFactorStart/Max/Cap`, `startGap`, `maxGap` |
 | Riders' gunfire | `PursuitConfig.fireRange`, `fireInterval`, `hitChanceFar/Near`, `dodgeBonus` |
 | Wounds | `HealthConfig` (damage per hit, recovery) |
-| Face-plant falls | `FallConfig` (chance, timeline) |
+| Face-plant falls | `FallConfig` (chance, timeline, feet drag, slide friction) |
 | Weather | `WeatherConfig.ts` (presets, likelihoods, durations) |
-| Story scenes | `StoryConfig` in `world/StoryEvents.ts` (interval, distance ahead, mix) |
+| Story scenes | `StoryConfig` in `world/StoryEvents.ts` (interval, view distance, speeds, mix) |
+| Hanging trees | `HANGING_SPOTS` in `maps/CottonFieldMap.ts`, `SWAMP_HANGING_SPOTS` in `maps/SwampMap.ts` |
 | Damage per obstacle | `damage` in `ObstacleCatalog.ts` |
 | Collectible frequency | `CollectibleConfig.chancePerRow`, `weights` |
 | Pickup effects | `CollectibleConfig` (stamina amounts, boost/lantern durations) |

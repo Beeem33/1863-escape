@@ -1,5 +1,6 @@
 import { FallConfig, HealthConfig, PlayerConfig, StaminaConfig } from '../config/GameConfig';
 import type { Surface } from '../core/EventBus';
+import { FallBody } from './FallBody';
 
 /**
  * Pure player state. Movement rules live in PlayerMovement, input mapping in
@@ -56,6 +57,8 @@ export class Player {
   fallTime = -1;
   /** -1 / 1 — which way the fall twists (keeps each fall a little different). */
   fallSide = 1;
+  /** The simulated body through a fall (what the camera and arms follow). */
+  readonly fallBody = new FallBody();
 
   reset(): void {
     this.x = 0;

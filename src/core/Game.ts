@@ -83,7 +83,6 @@ export class Game {
     this.post = new PostProcessing(this.renderer, this.scene, this.camera);
     this.audio = new AudioManager(this.bus, this.settings);
     this.ui = new UIManager(uiRoot, this.settings, {
-      play: () => this.openPlay(),
       pickLevel: (level) => this.startRun(level),
       resume: () => this.resume(),
       quitToMenu: () => this.toMenu(),
@@ -128,19 +127,13 @@ export class Game {
     this.post.fade = 0;
   }
 
-  /** The level list for the level-select screen. */
-  private levelOptions(): { level: number; title: string; name: string; unlockAt: number }[] {
+  /** The level list for the main menu. */
+  private levelOptions(): { level: number; title: string; name: string; startsAt: number }[] {
     const maps = this.world.maps;
     return Array.from({ length: maps.levelCount }, (_, i) => {
       const info = maps.levelInfo(i + 1);
-      return { level: i + 1, title: info.title, name: info.map.name, unlockAt: maps.levelStart(i + 1) };
+      return { level: i + 1, title: info.title, name: info.map.name, startsAt: maps.levelStart(i + 1) };
     });
-  }
-
-  /** Play: straight into Level 1, or choose a level once more are unlocked. */
-  openPlay(): void {
-    if (Records.unlockedLevel > 1) this.ui.openLevelSelect();
-    else this.startRun(1);
   }
 
   startRun(level = 1): void {

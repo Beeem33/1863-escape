@@ -68,8 +68,12 @@ export const PlayerConfig = {
 export const FallConfig = {
   /** Chance a collision with a vaultable obstacle becomes a full fall. */
   chance: 0.5,
-  /** Body hits the ground. */
+  /** Roughly when the body hits the ground (the fall itself is simulated — see FallBody). */
   impactAt: 0.55,
+  /** How hard the caught feet slow while he topples (m/s²). */
+  feetDecel: 10,
+  /** Friction once he is sliding on his chest (m/s²). */
+  slideDecel: 15,
   /** Starts pushing up off the ground. */
   pushUpAt: 2.2,
   /** On hands and knees, rising to his feet. */

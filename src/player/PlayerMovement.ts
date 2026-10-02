@@ -28,7 +28,7 @@ export class PlayerMovement {
    * @param baseSpeed  the expected running speed at the current difficulty
    */
   update(p: Player, intent: MovementIntent, baseSpeed: number, ground: GroundQuery, dt: number): void {
-    this.updateFall(p, dt);
+    this.updateFall(p, dt, ground);
     // Face down in the dirt: no control until he is back on his feet.
     if (p.downed) intent = NO_INPUT;
     this.updateStamina(p, intent, dt);
@@ -51,16 +51,22 @@ export class PlayerMovement {
     p.fallSide = Math.random() < 0.5 ? -1 : 1;
     p.invulnerableTimer = Math.max(p.invulnerableTimer, FallConfig.duration + 0.6);
     p.sprinting = false;
+    p.fallBody.begin(p.fallSide);
     this.bus.emit('player:fall', { stage: 'trip' });
   }
 
-  private updateFall(p: Player, dt: number): void {
+  private updateFall(p: Player, dt: number, ground: GroundQuery): void {
     if (!p.falling) return;
     const before = p.fallTime;
     p.fallTime += dt;
-    const crossed = (t: number) => before < t && p.fallTime >= t;
-    if (crossed(FallConfig.impactAt)) this.bus.emit('player:fall', { stage: 'impact' });
-    if (crossed(FallConfig.pushUpAt)) this.bus.emit('player:fall', { stage: 'getup' });
+    const body = p.fallBody;
+    const feetDecel = body.impactAt < 0 && p.speed > 0.1 ? FallConfig.feetDecel : 0;
+    const r = body.step(p.fallTime, dt, feetDecel);
+    if (r.impact) this.bus.emit('player:fall', { stage: 'impact' });
+    // Getting up, he steps his feet in under himself.
+    p.d += r.feetAdvance;
+    body.groundOffset = ground.height(p.x, p.d + body.reach) - ground.height(p.x, p.d);
+    if (before < FallConfig.pushUpAt && p.fallTime >= FallConfig.pushUpAt) this.bus.emit('player:fall', { stage: 'getup' });
     if (p.fallTime >= FallConfig.duration) p.fallTime = -1;
   }
 
@@ -113,11 +119,17 @@ export class PlayerMovement {
       target *= 1 - (1 - C.stumbleSpeedMultiplier) * k;
     }
     if (p.knockedDown > 0) target = 0;
-    // Pitching forward: momentum carries him a couple of meters, then he stops dead.
+    // Pitching forward: the caught feet drag, then he slides on his chest to a stop.
     const fallingDown = p.downed;
     if (fallingDown) target = 0;
 
-    const rate = fallingDown ? (p.fallTime < FallConfig.impactAt ? 9 : 40) : target > p.speed ? C.forwardAcceleration : C.forwardDeceleration;
+    const rate = fallingDown
+      ? p.fallBody.impactAt < 0
+        ? FallConfig.feetDecel
+        : FallConfig.slideDecel
+      : target > p.speed
+        ? C.forwardAcceleration
+        : C.forwardDeceleration;
     // Airborne: keep momentum (no acceleration in the air).
     if (p.grounded || target < p.speed) p.speed = approach(p.speed, target, rate * dt);
     p.d += p.speed * dt;
@@ -192,7 +204,7 @@ export class PlayerMovement {
   }
 
   private updateStride(p: Player, dt: number): void {
-    if (!p.grounded || p.speed < 0.5) return;
+    if (!p.grounded || p.speed < 0.5 || p.downed) return;
     // Longer strides at higher speed; cadence ≈ 3.2–3.8 steps/s.
     const stepLength = 1.15 + p.speed * 0.17;
     const before = Math.floor(p.stride);

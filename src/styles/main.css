@@ -324,7 +324,7 @@ body {
 }
 
 .menu-buttons {
-  margin-top: 34px;
+  margin-top: 22px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -652,54 +652,77 @@ body {
   letter-spacing: 0.04em;
 }
 
-.level-list {
+.menu-levels-label {
+  margin-top: 30px;
+  font-family: var(--caps);
+  font-size: 12px;
+  letter-spacing: 0.45em;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+}
+
+.menu-levels {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 14px auto 0;
+  max-width: 760px;
+}
+
+.menu-level {
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: 8px 0 4px;
-}
-
-.level-row {
-  display: grid;
-  grid-template-columns: 90px 1fr auto;
-  align-items: baseline;
-  gap: 14px;
-  padding: 14px 16px;
-  background: rgba(239, 228, 207, 0.04);
-  border: 1px solid rgba(217, 199, 163, 0.16);
+  align-items: center;
+  gap: 6px;
+  padding: 16px 14px 14px;
+  background: rgba(10, 7, 4, 0.45);
+  border: 1px solid rgba(217, 199, 163, 0.22);
   color: var(--ink);
   font-family: var(--serif);
-  font-size: 18px;
-  text-align: left;
   cursor: pointer;
-  transition: background 0.25s, border-color 0.25s;
+  transition: background 0.25s, border-color 0.25s, transform 0.25s;
 }
 
-.level-row:hover:not(:disabled) {
+.menu-level:hover,
+.menu-level:focus-visible {
   background: rgba(239, 228, 207, 0.1);
+  border-color: rgba(217, 199, 163, 0.6);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+.menu-level .num {
+  font-family: var(--caps);
+  font-size: 12px;
+  letter-spacing: 0.35em;
+  color: var(--paper);
+  text-transform: uppercase;
+}
+
+.menu-level .name {
+  font-size: 20px;
+}
+
+.menu-level .state {
+  font-size: 12px;
+  color: var(--ink-dim);
+  font-style: italic;
+}
+
+.menu-level.reached .state::after {
+  content: ' · reached';
+}
+
+.menu-level.first {
   border-color: rgba(217, 199, 163, 0.45);
 }
 
-.level-row .title {
-  font-family: var(--caps);
-  letter-spacing: 0.2em;
-  font-size: 13px;
-  color: var(--paper);
-}
-
-.level-row .state {
-  font-size: 13px;
-  color: var(--ink-dim);
-}
-
-.level-row.locked {
-  cursor: default;
-  opacity: 0.45;
-}
-
 @media (max-width: 640px) {
-  .level-row {
-    grid-template-columns: 1fr;
-    gap: 2px;
+  .menu-levels {
+    flex-direction: column;
+  }
+  .menu-level {
+    padding: 10px;
   }
 }

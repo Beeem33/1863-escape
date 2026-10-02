@@ -6,13 +6,11 @@ import { GameOverScreen } from './GameOverScreen';
 import { HowToPlay } from './HowToPlay';
 import { HUD } from './HUD';
 import { LevelCard } from './LevelCard';
-import { LevelSelect, type LevelOption } from './LevelSelect';
-import { MainMenu } from './MainMenu';
+import { MainMenu, type LevelOption } from './MainMenu';
 import { PauseMenu } from './PauseMenu';
 import { SettingsPanel } from './SettingsPanel';
 
 export interface UIActions {
-  play: () => void;
   pickLevel: (level: number) => void;
   resume: () => void;
   quitToMenu: () => void;
@@ -30,7 +28,6 @@ export class UIManager {
   readonly gameOver: GameOverScreen;
   readonly debug: DebugOverlay;
   readonly levelCard: LevelCard;
-  readonly levelSelect: LevelSelect;
   /** Where "Back" from Settings / How to Play returns to. */
   private returnTo: 'menu' | 'pause' = 'menu';
 
@@ -39,8 +36,8 @@ export class UIManager {
     this.captions = new Captions(root);
     this.levelCard = new LevelCard(root);
     el('div', 'flash', '', root);
-    this.menu = new MainMenu(root, {
-      play: actions.play,
+    this.menu = new MainMenu(root, levels, {
+      pickLevel: actions.pickLevel,
       howTo: () => this.openPanel('howTo', 'menu'),
       settings: () => this.openPanel('settings', 'menu'),
     });
@@ -52,16 +49,7 @@ export class UIManager {
     this.gameOver = new GameOverScreen(root, { retry: actions.retry, menu: actions.quitToMenu });
     this.howTo = new HowToPlay(root, () => this.closePanel());
     this.settingsPanel = new SettingsPanel(root, settings, () => this.closePanel());
-    this.levelSelect = new LevelSelect(root, levels, actions.pickLevel, () => {
-      this.levelSelect.hide(true);
-      this.menu.show();
-    });
     this.debug = new DebugOverlay(root);
-  }
-
-  openLevelSelect(): void {
-    this.menu.hide(true);
-    this.levelSelect.show();
   }
 
   private openPanel(which: 'howTo' | 'settings', from: 'menu' | 'pause'): void {
@@ -72,11 +60,6 @@ export class UIManager {
 
   /** Close Settings / How to Play. Returns true if a panel was open. */
   closePanel(): boolean {
-    if (this.levelSelect.visible) {
-      this.levelSelect.hide(true);
-      this.menu.show();
-      return true;
-    }
     if (!this.howTo.visible && !this.settingsPanel.visible) return false;
     this.howTo.hide(true);
     this.settingsPanel.hide(true);
@@ -85,7 +68,7 @@ export class UIManager {
   }
 
   hideAllScreens(): void {
-    for (const s of [this.menu, this.pause, this.gameOver, this.howTo, this.settingsPanel, this.levelSelect]) s.hide(true);
+    for (const s of [this.menu, this.pause, this.gameOver, this.howTo, this.settingsPanel]) s.hide(true);
     this.levelCard.hide();
   }
 }

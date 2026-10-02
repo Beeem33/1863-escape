@@ -26,6 +26,26 @@ export const CROSS_LANE_SPACING = 170;
 const LANE_HALF = 3.2;
 const laneCenter = (d: number) => Math.round((d - 100) / CROSS_LANE_SPACING) * CROSS_LANE_SPACING + 100;
 const inCrossLane = (d: number) => Math.abs(d - laneCenter(d)) < LANE_HALF;
+/**
+ * Before each cross lane the stalks have been cut down over a long stretch, so
+ * from the trail you can see across the field to the lane where scenes play
+ * out. 0 = full-height cotton, 1 = cut down.
+ */
+const CUT_LENGTH = 58;
+function cutDown(d: number): number {
+  const rel = d - laneCenter(d);
+  return rel > -LANE_HALF ? 0 : smoothstep(-CUT_LENGTH, -CUT_LENGTH + 10, rel);
+}
+
+/**
+ * Where (m into the level) the hanging trees stand, and on which side. Two per
+ * level, fixed, close beside the trail, so they cannot be missed.
+ */
+export const HANGING_SPOTS: [number, number][] = [
+  [520, -1],
+  [1380, 1],
+];
+
 /** The next cross lane at or beyond distance d. */
 export function nextCrossLane(d: number): number {
   const c = laneCenter(d);
@@ -101,17 +121,22 @@ export const CottonFieldMap: MapDefinition = {
   decorate(ctx: DecorationContext) {
     const { rng, d0, d1, noise, corridor } = ctx;
 
-    // Rarely: a man hanged as a warning to others who would run. Decided first
-    // so the cotton between the tree and the trail can be cleared.
+    // A man hanged as a warning to others who would run, at fixed points beside
+    // the trail. Decided first so the cotton around the tree, and along the
+    // approach to it, can be cleared.
     let hang: { x: number; d: number; side: number } | null = null;
-    if (rng.chance(0.03 * ctx.weight(d0))) {
-      const side = rng.sign();
-      hang = { side, x: side * rng.range(corridor + 5, corridor + 12), d: rng.range(d0 + 10, d1 - 10) };
-      ctx.place('oakMoss', hang.x, hang.d, { scale: 1.05, rotY: rng.range(0, Math.PI * 2) });
-      ctx.feature('hangingTree', hang.x, hang.d, { facing: (side > 0 ? Math.PI : 0) + rng.range(-0.25, 0.25) });
+    for (const [at, side] of HANGING_SPOTS) {
+      const d = ctx.mapStart + at;
+      if (d < d0 || d >= d1) continue;
+      hang = { side, x: side * (corridor + 3.6), d };
+      ctx.place('oak', hang.x + side * 0.4, d, { scale: 1.0, rotY: rng.range(0, Math.PI * 2) });
+      ctx.feature('hangingTree', hang.x, d, { facing: (side > 0 ? Math.PI : 0) + rng.range(-0.1, 0.1) });
+      ctx.feature('birds', hang.x, d, { count: 6, radius: 7, height: 11 }); // crows circling over it
     }
     const inHangClearing = (x: number, d: number) =>
-      hang !== null && Math.abs(d - hang.d) < 7 && Math.sign(x) === hang.side && Math.abs(x) < Math.abs(hang.x) + 6;
+      hang !== null && Math.sign(x) === hang.side && d > hang.d - 6 && d < hang.d + 6 && Math.abs(x) > corridor - 1.5 && Math.abs(x) < Math.abs(hang.x) + 6;
+    const onHangApproach = (x: number, d: number) =>
+      hang !== null && Math.sign(x) === hang.side && d > hang.d - 45 && d <= hang.d - 6 && Math.abs(x) > corridor - 3 && Math.abs(x) < Math.abs(hang.x) + 6;
 
     // ---- Cotton rows (decoration — never blocks the runner) -------------
     const rowSpacing = 1.3;
@@ -132,7 +157,10 @@ export const CottonFieldMap: MapDefinition = {
         const inCorridor = Math.abs(px) < corridor + 0.5;
         if (inCorridor && rng.chance(0.62)) continue;
         if (!ctx.isClear(px, d, inCorridor ? 1.5 : 0.5, inCorridor ? 7 : 0)) continue;
-        ctx.place('cottonPlant', px, d, { scale: rng.range(0.92, 1.08), scaleY: rng.range(0.93, 1.05), tilt: rng.range(-0.07, 0.07) });
+        const cut = Math.max(cutDown(d), onHangApproach(px, d) ? 1 : 0);
+        if (cut > 0 && rng.chance(0.35 * cut)) continue;
+        const scaleY = rng.range(0.93, 1.05) * (1 - 0.64 * cut);
+        ctx.place('cottonPlant', px, d, { scale: rng.range(0.92, 1.08), scaleY, tilt: rng.range(-0.07, 0.07) });
       }
     }
 

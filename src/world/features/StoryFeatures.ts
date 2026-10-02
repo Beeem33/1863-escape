@@ -28,7 +28,7 @@ function sign(): THREE.CanvasTexture {
   }
   // Crude hand-painted letters.
   g.fillStyle = '#1c1410';
-  g.font = 'bold 52px Georgia, serif';
+  g.font = 'bold 60px Georgia, serif';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.fillText('RUNNER', 128, 52);
@@ -41,7 +41,7 @@ function sign(): THREE.CanvasTexture {
  * A man hanged from a limb as a warning, a board around his neck that reads
  * RUNNER. Rare by design; kept back from the trail and without gore — the
  * weight of the scene is in what it says, not in what it shows.
- * params: facing (yaw toward the trail)
+ * params: facing (yaw of the limb; it reaches out over the trail)
  */
 export class HangingTree extends Feature {
   private body: Human | null = null;
@@ -60,12 +60,13 @@ export class HangingTree extends Feature {
     this.limb = new THREE.Mesh(limbGeo, bark);
     this.limb.castShadow = true;
     const ropeMat = new THREE.MeshStandardMaterial({ color: 0x8a7a5a, roughness: 1 });
-    this.rope = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1, 5).translate(0, -0.5, 0), ropeMat);
-    this.cords = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.006, 4, 12, Math.PI), ropeMat);
+    this.rope = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 1, 6).translate(0, -0.5, 0), ropeMat);
+    this.cords = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.007, 4, 12, Math.PI), ropeMat);
     this.board = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.46, 0.17),
+      new THREE.PlaneGeometry(0.6, 0.23),
       new THREE.MeshStandardMaterial({ map: sign(), roughness: 1, side: THREE.DoubleSide }),
     );
+    this.board.rotation.order = 'YXZ';
     this.object.add(this.limb, this.rope, this.board, this.cords);
   }
 
@@ -100,7 +101,7 @@ export class HangingTree extends Feature {
     p.x = ax + swing;
     p.z = az;
     p.y = neckY - BODY.spineOffset - BODY.neckHeight;
-    p.yaw = this.yaw + Math.PI / 2 + Math.sin(t * 0.25 + this.seed) * 0.35;
+    p.yaw = this.yaw - Math.PI / 2 + Math.sin(t * 0.25 + this.seed) * 0.3; // facing out along the limb, toward the trail
     // Rope from limb to neck, in the feature's local space.
     const local = (wx: number, wy: number, wz: number) => this.object.worldToLocal(new THREE.Vector3(wx, wy, wz));
     const top = local(ax, ay, az);
@@ -110,9 +111,9 @@ export class HangingTree extends Feature {
     // The board hangs on the chest, facing the way he faces.
     const fwdX = -Math.sin(p.yaw);
     const fwdZ = -Math.cos(p.yaw);
-    const chest = local(p.x + fwdX * 0.16, neckY - 0.28, p.z + fwdZ * 0.16);
+    const chest = local(p.x + fwdX * 0.17, neckY - 0.32, p.z + fwdZ * 0.17);
     this.board.position.copy(chest);
-    this.board.rotation.set(0.12, p.yaw - this.yaw, 0);
+    this.board.rotation.set(-0.12, p.yaw - this.yaw + Math.PI, 0); // lettering faces out from his chest
     this.cords.position.copy(local(p.x + fwdX * 0.1, neckY - 0.17, p.z + fwdZ * 0.1));
     this.cords.rotation.set(0, p.yaw - this.yaw, 0);
   }
