@@ -147,7 +147,7 @@ export class ObstacleManager {
     const dir = p.x < o.x ? -1 : 1;
     p.vx = dir * o.knockback;
     o.onHit(p.x, this.particles);
-    this.bus.emit('player:hit', { obstacle: o.kind, severity: h.severity, x: o.x, z: -o.d });
+    this.bus.emit('player:hit', { obstacle: o.kind, severity: h.severity, damage: o.damage * (h.severity >= 1 ? 1 : 0.8), x: o.x, z: -o.d });
   }
 
   clear(): void {

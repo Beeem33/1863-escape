@@ -12,7 +12,7 @@ export interface GameEvents {
   'player:footstep': { intensity: number; surface: Surface };
   'player:jump': undefined;
   'player:land': { impact: number; surface: Surface };
-  'player:hit': { obstacle: string; severity: number; x: number; z: number };
+  'player:hit': { obstacle: string; severity: number; damage: number; x: number; z: number };
   'player:sprint': { active: boolean };
   'player:exhausted': { exhausted: boolean };
   'player:splash': { intensity: number };
