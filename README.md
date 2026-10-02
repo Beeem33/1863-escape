@@ -1,18 +1,33 @@
 # 1863 — The Escape
 
 A first-person 3D infinite runner set in the American South in 1863. You are an
-enslaved man running for freedom: through the cotton fields, into the swamp,
-and across an active Civil War battlefield toward the Union lines. Riders and
-hounds are behind you. Every stumble lets them close the distance.
+enslaved man running for freedom across three levels: the cotton fields, the
+swamp, and an active Civil War battlefield between two armies. Armed riders
+and hounds are behind you. Every stumble lets them close the distance, and
+inside 50 feet they open fire.
 
 The game is built to feel like a historical drama rather than an arcade game:
 golden-hour light, fog, powder smoke, distant armies, and a soundscape that
 tells you how close the pursuit is. It treats its subject seriously. It is
 about survival, escape, uncertainty and freedom, and there is no gore.
 
-> **Prototype status:** a complete, playable vertical slice with all three
-> environments, the full gameplay loop, procedural audio and a debug mode.
-> All art and sound are generated in code; the repository has no asset files.
+> **Prototype status:** a complete, playable vertical slice with three levels,
+> the full gameplay loop, procedural audio, weather and a debug mode. All
+> art, characters and sound are generated in code; the repository has no
+> asset files.
+
+## Levels
+
+| Level | Map | Distance |
+| --- | --- | --- |
+| 1 | The Cotton Fields | 0 – 2,000 m |
+| 2 | The Swamp | 2,000 – 4,000 m |
+| 3 | The Battlefield | 4,000 m onward (endless) |
+
+The run never stops at a level boundary. The next map blends in, an
+obstacle-free breather opens up, letterbox bars slide in with the level title,
+and the level is **unlocked permanently**. Once more than one level is
+unlocked, **Play** lets you choose where the journey begins.
 
 ---
 
@@ -31,16 +46,29 @@ about survival, escape, uncertainty and freedom, and there is no gore.
 | **F1** or **`** | Debug overlay (see [Debug mode](#debug-mode)) |
 
 You always run forward. The playable corridor is 20 m wide with no lanes, so
-you can be anywhere inside it. Low obstacles (fences, logs, barrels) can be
-vaulted. Tall ones (wagons, rocks, barricades, fires) must be avoided. There
-is always a way through.
+you can be anywhere inside it. Low obstacles (fences, logs, barrels, wire)
+can be vaulted. Tall ones (wagons, rocks, barricades, fires) must be avoided.
+There is always a way through.
+
+**Tripping:** hitting a low obstacle has a 50% chance to send you flat on
+your face. You lie in the dirt and push yourself up, about 5 seconds in
+all, while the riders close in.
+
+**Gunfire:** inside 50 ft (15.2 m) the riders shoot. Moving sideways makes
+you harder to hit. Three hits ends the run; wounds ease if you stay out of
+range for a while.
+
+**Weather** is randomised per run and changes as you go: clear, hazy,
+overcast, fog, drizzle, rain and thunderstorms, with lightning and wet,
+muddy ground.
 
 **Collectibles:** ◆ map pieces (score; every 10 reveals a fragment of the
 route north), water gourds and cornbread (stamina), horseshoes (a burst of
 speed with no stamina drain), lanterns (push back fog and darkness).
 
-**Death:** the pursuers catch you when the pursuit gap reaches zero.
-Distance is the score, and your best distance is saved locally.
+**The end:** the riders catch you when the pursuit gap reaches zero, or
+shoot you down. Distance run is the score, and your best distance is saved
+locally.
 
 ---
 
@@ -77,6 +105,11 @@ host or sub-path (for example GitHub Pages).
 - `?debug` opens with the debug overlay.
 - `?mute` starts muted.
 
+In `npm run dev`, a `window.dev` toolkit is available in the console:
+`dev.start(seed, level)`, `dev.sim(seconds)`, `dev.goto(distance)`,
+`dev.shot()`, `dev.lineup()` (renders the character cast), `dev.armSheet()`
+and `dev.fallAt(t)`. It is never included in production builds.
+
 ---
 
 ## Project architecture
@@ -85,8 +118,9 @@ host or sub-path (for example GitHub Pages).
 src/
 ├── main.ts                      Entry point
 ├── config/                      ★ All tuning lives here
-│   ├── GameConfig.ts            Player, stamina, camera, pursuit, difficulty, collectibles, world, hazards, graphics
-│   ├── MapConfig.ts             Map order, map lengths, obstacle spawn weights per map
+│   ├── GameConfig.ts            Player, falls, health, stamina, camera, pursuit & gunfire, difficulty, collectibles, world, hazards, graphics
+│   ├── MapConfig.ts             LEVELS (order & length), obstacle spawn weights per map
+│   ├── WeatherConfig.ts         Weather presets, likelihoods, durations
 │   └── Story.ts                 Route fragments and ending lines
 ├── core/
 │   ├── Game.ts                  Owns every system; state machine; frame loop
@@ -100,12 +134,25 @@ src/
 │   ├── Player.ts                Pure state
 │   ├── PlayerController.ts      Key bindings → MovementIntent
 │   ├── PlayerMovement.ts        Physics: run, strafe, jump, stamina, stride timing
-│   ├── PlayerCamera.ts          Head bob, sway, roll, FOV, shake, mouse look, glance back
+│   ├── PlayerCamera.ts          Head bob, sway, roll, FOV, shake, mouse look, glance back, fall choreography
 │   ├── PlayerSystem.ts          Bundles the above
+│   ├── ArmModel.ts              First-person arm rig (jointed fingers, sleeves)
+│   ├── FirstPersonArms.ts       Arm animation: running pump, jumps, the fall
 │   └── Autopilot.ts             Bot that follows the safe route (attract mode, F5)
+├── characters/
+│   ├── SdfMesh.ts               Signed-distance modelling kit + surface-nets mesher
+│   ├── HumanGeometry.ts         Body parts (near/far detail)
+│   ├── HumanPose.ts             Pose type + animation library
+│   ├── HumanCrowd.ts            Instanced human renderer with forward kinematics
+│   ├── Quadruped.ts             Horses and hounds
+│   ├── Styles.ts                Union, Confederate, slave catcher, freedom seeker
+│   └── Characters.ts            Facade
+├── dev/DevTools.ts              window.dev helpers (dev server only)
 ├── world/
 │   ├── WorldManager.ts          Facade over everything below
-│   ├── MapManager.ts            Journey layout, map blending, transitions
+│   ├── MapManager.ts            Levels, map blending, transitions
+│   ├── Weather.ts               Randomised weather + lightning
+│   ├── StoryEvents.ts           Scenes that cross your path ahead
 │   ├── ProceduralGenerator.ts   Obstacle rows, guaranteed route, collectibles
 │   ├── ChunkManager.ts          Builds/recycles chunks around the player
 │   ├── GroundMesh.ts            Pooled ground strip per chunk
@@ -118,7 +165,7 @@ src/
 │   ├── DecorKinds.ts            Decoration + feature ids
 │   ├── Materials.ts             Shared materials (+ wind sway shader patch)
 │   ├── props/                   Procedural models: vegetation, structures, figures
-│   └── features/                Animated set pieces: soldiers, cannon, fire, flags, smoke, birds, lanterns
+│   └── features/                Set pieces: firing lines, charges, formations, the fallen, hanging trees, cannon, fire, flags, smoke, birds, lanterns
 ├── maps/
 │   ├── MapDefinition.ts         The map interface
 │   ├── CottonFieldMap.ts
@@ -139,8 +186,7 @@ src/
 │   ├── MapPiece.ts, Supplies.ts Water gourd, cornbread, horseshoe, lantern
 │   └── CollectibleManager.ts    Registry, pooling, pickup + effects
 ├── enemies/
-│   ├── Pursuer.ts               Rider-on-horse / hound figure with gait
-│   ├── PursuitManager.ts        The pursuit gap, cues, chasers, flank glimpses
+│   ├── PursuitManager.ts        Pursuit gap, mounted riders & hounds, gunfire, cues, flank glimpses
 │   └── BattleHazards.ts         Telegraphed artillery, musket fire
 ├── audio/
 │   ├── AudioManager.ts          Buses, reverb, spatialisation, event wiring
@@ -152,7 +198,8 @@ src/
 │   ├── PostProcessing.ts        Bloom, colour grade, vignette, grain, danger, fade
 │   ├── ParticleSystem.ts        Instanced billboard particles (1 draw call)
 │   ├── Particles.ts             Effect helpers (dust, splash, explosion, fire…)
-│   └── AmbientEffects.ts        Dust/fireflies/ash, ground mist, smoke banks
+│   ├── AmbientEffects.ts        Dust/fireflies/ash, ground mist, smoke banks
+│   └── Rain.ts                  GPU rain streaks
 ├── ui/                          HUD, menus, captions, settings, debug overlay
 ├── utils/                       Seeded RNG, noise, math, storage, procedural textures
 └── styles/main.css
@@ -181,10 +228,10 @@ src/
    instance slots, features, obstacles and collectibles are all pooled, so
    memory stays flat however far you run.
 
-2. **The journey.** `MapManager` lays maps out in the order of
-   `MAP_SEQUENCE` (cotton → swamp → battlefield, then it loops, harder each
-   lap). Each map's length is jittered per run. Over the last
-   `transitionLength` meters (320 m) of a map, the next one blends in:
+2. **The journey.** `MapManager` lays the levels out in the order of
+   `LEVELS` (cotton 0–2,000 m → swamp 2,000–4,000 m → battlefield, endless).
+   Over the last `transitionLength` meters (320 m) of a level, the next map
+   blends in:
    terrain height and colour, atmosphere (sky, fog, light, grade), ambience
    audio, obstacle choice and decoration density all cross-fade. That is why
    the cotton field goes to seed and thickens into scrub before the swamp,
@@ -225,8 +272,8 @@ src/
 
 1. Add its id to `MapId` in `src/maps/MapDefinition.ts`.
 2. Add a tuning entry in `src/config/MapConfig.ts` (`MAP_TUNING`), with
-   length, obstacle weights, density, collectible multipliers and battle
-   hazards, and put the id in `MAP_SEQUENCE` where it should appear.
+   obstacle weights, density, collectible multipliers and battle hazards,
+   and add a level for it to `LEVELS` (with its length).
 3. Create `src/maps/YourMap.ts` exporting a `MapDefinition`:
    - `atmosphere`: sky, sun, fog, colour grade, dust/mist/smoke, water level
    - `terrain`: `height(x, d, noise)`, `color(...)`, `surface(...)`, which
@@ -288,12 +335,17 @@ Everything is in `src/config/`. No system code needs to change.
 | --- | --- |
 | Player speed | `PlayerConfig.baseRunSpeed`, `maxRunSpeed`, `sprintMultiplier` |
 | Stamina | `StaminaConfig` (drains, regen, sprint threshold) |
-| Difficulty ramp | `DifficultyConfig.rampDistance` |
+| Difficulty ramp | `DifficultyConfig.rampDistance`, `lateRampStart/Distance/Max` (keeps climbing) |
 | Obstacle density | `DifficultyConfig.obstaclesPerRowEasy/Hard`, per-map `density` |
 | Row spacing / route width | `DifficultyConfig.rowSpacing*`, `safePathWidth*` |
 | Spawn rates per obstacle | `MAP_TUNING[map].obstacles` in `MapConfig.ts` |
-| Map length / order | `MAP_TUNING[map].length`, `MAP_SEQUENCE` |
-| Pursuit speed / pressure | `PursuitConfig.speedFactorStart/Max`, `startGap`, `maxGap` |
+| Level length / order | `LEVELS` in `MapConfig.ts` |
+| Pursuit speed / pressure | `PursuitConfig.speedFactorStart/Max/Cap`, `startGap`, `maxGap` |
+| Riders' gunfire | `PursuitConfig.fireRange`, `fireInterval`, `hitChanceFar/Near`, `dodgeBonus` |
+| Wounds | `HealthConfig` (damage per hit, recovery) |
+| Face-plant falls | `FallConfig` (chance, timeline) |
+| Weather | `WeatherConfig.ts` (presets, likelihoods, durations) |
+| Story scenes | `StoryConfig` in `world/StoryEvents.ts` (interval, distance ahead, mix) |
 | Damage per obstacle | `damage` in `ObstacleCatalog.ts` |
 | Collectible frequency | `CollectibleConfig.chancePerRow`, `weights` |
 | Pickup effects | `CollectibleConfig` (stamina amounts, boost/lantern durations) |
@@ -312,7 +364,7 @@ gain.
 ## Debug mode
 
 Press **F1** (or **`**) for the overlay. It shows FPS, state, player
-position and speed, current map and transition %, lap, chunk, difficulty,
+position and speed, current map and transition %, level, weather, chunk, difficulty,
 pursuit gap, stamina, seed, draw calls and triangles, active
 obstacles/pickups/particles/features, and instance usage.
 
@@ -324,6 +376,7 @@ While the overlay is open:
 | **F3** | Collision boxes (red solid, yellow vault, blue ground, green slow) |
 | **F4** | Skip to just before the next map transition |
 | **F5** | Autopilot (the bot runs the route) |
+| **F6** | Next weather |
 
 The `game` object is also on `window` for console poking (for example
 `game.pursuit.gap = 5`).
@@ -340,6 +393,16 @@ The `game` object is also on `window` for console poking (for example
 - **Settings → Graphics quality** lowers pixel ratio, shadow resolution,
   bloom and foliage density.
 
+## Characters
+
+All people and animals are modelled in code with a small signed-distance
+kit: smooth unions of capsules and ellipsoids, polygonised once at startup
+into seamless meshes. Every body part is GPU-instanced and posed with
+forward kinematics each frame, so whole armies cost about a dozen draw
+calls. Figures switch to a lighter mesh beyond about 40 m, and soldiers only
+exist within about 200 m of the runner. Run `dev.lineup()` in the dev server
+to inspect the cast.
+
 ## Historical note
 
 The setting is grounded in the period. The Emancipation Proclamation took
@@ -348,14 +411,21 @@ Union lines, where escaping people were received as "contraband of war". The
 route fragments reflect advice freedom seekers relied on: follow the North
 Star, cross running water to lose the hounds, watch for safe-house signals.
 The fragments are written for the game, and no historical texts are quoted.
-The pursuers are deliberately kept as silhouettes and sounds rather than
-characters.
+Violence is shown the way the period's own accounts convey it: at a
+distance, without gore. Other freedom seekers are cut down or ridden down
+across your path, the dead lie on the battlefield, and rarely a man hangs
+from a limb with a board reading RUNNER. Wire entanglements on the
+battlefield are telegraph wire, as used at Fort Sanders in November 1863;
+barbed wire was not invented until after the war. Union lines include
+United States Colored Troops, who were fighting in the Mississippi Valley
+by mid-1863.
 
 ## Ideas for next steps
 
 - Real texture and model assets (photogrammetry vegetation, PBR ground sets)
   in place of the procedural stand-ins
 - A night segment with lantern gameplay and the North Star as a navigation cue
+- Skinned (rather than rigid-part) characters for close-up shots
 - Gamepad and touch controls
 - An ending sequence on reaching the Union camp after a set distance
 - More set-piece events (river crossings, a burning bridge, a patrol checkpoint)
