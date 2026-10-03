@@ -1,5 +1,11 @@
 # 1863 — The Escape
 
+<p align="center">
+  <a href="https://beeem33.github.io/1863-escape/"><img alt="▶ Play in your browser" src="https://img.shields.io/badge/%E2%96%B6%20PLAY-in%20your%20browser-8a5a2b?style=for-the-badge" height="44"></a>
+</p>
+
+<p align="center"><b><a href="https://beeem33.github.io/1863-escape/">beeem33.github.io/1863-escape</a></b> · desktop browser, keyboard + mouse, headphones recommended</p>
+
 A first-person 3D infinite runner set in the American South in 1863. You are an
 enslaved man running for freedom across three levels: the cotton fields, the
 swamp, and an active Civil War battlefield between two armies. Armed riders
@@ -107,7 +113,8 @@ npm run typecheck  # type-check only
 ```
 
 The build uses a relative base path, so `dist/` can be hosted from any static
-host or sub-path (for example GitHub Pages).
+host or sub-path. Every push to `main` is built and published to GitHub Pages
+by `.github/workflows/deploy.yml`, which is where the Play button points.
 
 **URL options:**
 
