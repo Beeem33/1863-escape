@@ -1,10 +1,10 @@
 # 1863 — The Escape
 
 <p align="center">
-  <a href="https://beeem33.github.io/1863-escape-play/"><img alt="▶ Play in your browser" src="https://img.shields.io/badge/%E2%96%B6%20PLAY-in%20your%20browser-8a5a2b?style=for-the-badge" height="44"></a>
+  <a href="https://beeem33.github.io/1863-escape/"><img alt="▶ Play in your browser" src="https://img.shields.io/badge/%E2%96%B6%20PLAY-in%20your%20browser-8a5a2b?style=for-the-badge" height="44"></a>
 </p>
 
-<p align="center"><b><a href="https://beeem33.github.io/1863-escape-play/">beeem33.github.io/1863-escape-play</a></b> · desktop browser, keyboard + mouse, headphones recommended</p>
+<p align="center"><b><a href="https://beeem33.github.io/1863-escape/">beeem33.github.io/1863-escape</a></b> · desktop (keyboard + mouse) or phone (touch controls, full screen) · headphones recommended</p>
 
 A first-person 3D infinite runner set in the American South in 1863. You are an
 enslaved man running for freedom across three levels: the cotton fields, the
@@ -50,6 +50,23 @@ starting point straight from the main menu.
 | **Mouse** | Look around (click to capture, **Esc** to release) |
 | **Esc** / **P** | Pause |
 | **F1** or **`** | Debug overlay (see [Debug mode](#debug-mode)) |
+
+### On a phone or tablet
+
+On touch devices the game shows on-screen controls and goes full screen
+(landscape) when you start a run. Desktop play is unchanged.
+
+| Control | Action |
+| --- | --- |
+| **Left stick** (touch anywhere on the left) | Move left / right; up pushes harder, all the way up sprints; down eases off |
+| **Jump** | Vault / leap |
+| **Sprint** (hold) | Sprint |
+| **Look back** (hold) | Glance back over your shoulder |
+| **Drag on the right** | Look around |
+| **❚❚** | Pause |
+
+iPhone Safari can't make a web page full screen: tap **Share → Add to Home
+Screen** and launch the game from that icon to play full screen.
 
 You always run forward. The playable corridor is 20 m wide with no lanes, so
 you can be anywhere inside it. Low obstacles (fences, logs, barrels, wire)
@@ -113,10 +130,9 @@ npm run typecheck  # type-check only
 ```
 
 The build uses a relative base path, so `dist/` can be hosted from any static
-host or sub-path. `npm run deploy` builds the game and publishes `dist/` to the
-public repo [Beeem33/1863-escape-play](https://github.com/Beeem33/1863-escape-play),
-which GitHub Pages serves at the Play button's address. Only the minified build
-is public; this source repo stays private.
+host or sub-path. Every push to `main` builds the game and publishes it to
+GitHub Pages (`.github/workflows/deploy.yml`), which serves it at the Play
+button's address.
 
 **URL options:**
 
