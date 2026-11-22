@@ -8,6 +8,7 @@ import { PursuitManager } from '../enemies/PursuitManager';
 import { Autopilot } from '../player/Autopilot';
 import { FirstPersonArms } from '../player/FirstPersonArms';
 import { PlayerSystem } from '../player/PlayerSystem';
+import { TouchControls, iosFullscreenTip } from '../ui/TouchControls';
 import { UIManager } from '../ui/UIManager';
 import { formatDistance } from '../utils/MathUtils';
 import { Random, hash32, makeSeed } from '../utils/Random';
@@ -19,6 +20,7 @@ import { Difficulty } from './Difficulty';
 import { EventBus } from './EventBus';
 import { GameLoop } from './GameLoop';
 import { GameState, Records, RunStats } from './GameState';
+import { isTouchDevice } from './Device';
 import { InputManager } from './InputManager';
 import { Settings, type Quality } from './Settings';
 
@@ -50,6 +52,8 @@ export class Game {
   readonly arms = new FirstPersonArms();
   readonly weather = new WeatherSystem();
   readonly story: StoryEvents;
+  /** On-screen controls; only on phones/tablets. */
+  readonly touch: TouchControls | null = null;
 
   state = GameState.Menu;
   private eventRng = new Random(1);
@@ -89,6 +93,10 @@ export class Game {
       retry: () => this.startRun(this.stats.startLevel),
     }, this.levelOptions());
     this.loop = new GameLoop((dt) => this.frame(dt));
+    if (isTouchDevice) {
+      this.touch = new TouchControls(this.input, () => this.pause());
+      iosFullscreenTip(this.ui.menu.root);
+    }
 
     const params = new URLSearchParams(location.search);
     if (params.has('seed')) this.fixedSeed = Number(params.get('seed')) || 1;
@@ -137,6 +145,7 @@ export class Game {
   }
 
   startRun(level = 1): void {
+    this.touch?.enterFullscreen();
     this.resetWorld(this.newSeed(), level);
     this.state = GameState.Playing;
     this.stateTime = 0;
@@ -182,6 +191,7 @@ export class Game {
 
   resume(): void {
     if (this.state !== GameState.Paused) return;
+    this.touch?.enterFullscreen();
     this.ui.closePanel();
     this.ui.pause.hide(true);
     this.state = GameState.Playing;
@@ -333,6 +343,7 @@ export class Game {
 
   private frame(dt: number): void {
     this.handleGlobalKeys();
+    this.touch?.setActive(this.state === GameState.Playing);
     this.stateTime += dt;
     const p = this.players.player;
     const baseSpeed = Difficulty.runSpeed(p.d);

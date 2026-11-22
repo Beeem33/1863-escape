@@ -1,3 +1,4 @@
+import { isTouchDevice } from '../core/Device';
 import { button, el, Screen } from './dom';
 
 export class HowToPlay extends Screen {
@@ -12,7 +13,16 @@ export class HowToPlay extends Screen {
       panel,
     );
     const keys = el('div', 'keys', '', panel);
-    const rows: [string, string][] = [
+    const rows: [string, string][] = isTouchDevice ? [
+      ['Left stick', 'Drag left / right to move across the trail'],
+      ['Stick up', 'Push harder — all the way up to sprint'],
+      ['Stick down', 'Ease off — catch your breath, lose ground'],
+      ['Jump', 'Vault low obstacles, leap ditches and craters'],
+      ['Sprint', 'Hold to sprint (burns stamina)'],
+      ['Look back', 'Hold to glance over your shoulder'],
+      ['Right side', 'Drag to look around'],
+      ['❚❚', 'Pause'],
+    ] : [
       ['W / ↑', 'Push harder'],
       ['S / ↓', 'Ease off — catch your breath, lose ground'],
       ['A D / ← →', 'Move left and right'],

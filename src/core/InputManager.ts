@@ -4,6 +4,8 @@
  * - `isDown(code)` for held keys (uses KeyboardEvent.code, so it works on any layout).
  * - `wasPressed(code)` for one-shot presses; cleared at the end of every frame.
  * - Mouse look deltas are only collected while the pointer is locked.
+ * - On touch devices the on-screen controls (TouchControls) feed the same
+ *   key codes and look deltas through `setHeld`, `tap` and `addLook`.
  */
 export class InputManager {
   private down = new Set<string>();
@@ -13,6 +15,8 @@ export class InputManager {
   pointerLocked = false;
   /** Called when pointer lock is gained or lost. */
   onPointerLockChange: ((locked: boolean) => void) | null = null;
+  /** Touch devices have no mouse to capture, so pointer lock is skipped. */
+  touchMode = false;
 
   constructor(private readonly element: HTMLElement) {
     window.addEventListener('keydown', this.handleKeyDown);
@@ -59,8 +63,25 @@ export class InputManager {
     return d;
   }
 
+  /** Hold or release a key code from an on-screen control. */
+  setHeld(code: string, held: boolean): void {
+    if (held) this.down.add(code);
+    else this.down.delete(code);
+  }
+
+  /** A one-shot press from an on-screen control (like a key going down). */
+  tap(code: string): void {
+    this.pressed.add(code);
+  }
+
+  /** Look movement from a touch drag, in the same units as mouse movement. */
+  addLook(dx: number, dy: number): void {
+    this.mouseDX += dx;
+    this.mouseDY += dy;
+  }
+
   requestPointerLock(): void {
-    if (this.pointerLocked) return;
+    if (this.pointerLocked || this.touchMode) return;
     try {
       const p = this.element.requestPointerLock() as unknown as Promise<void> | undefined;
       p?.catch?.(() => {

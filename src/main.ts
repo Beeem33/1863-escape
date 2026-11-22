@@ -1,4 +1,5 @@
 import './styles/main.css';
+import './styles/touch.css';
 import { Game } from './core/Game';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
